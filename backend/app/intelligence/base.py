@@ -127,6 +127,12 @@ class BaseIntelligenceModule:
     # runs without it, but its prompt should label seller-side assumptions
     # as incomplete.
     consumes_company_profile: ClassVar[bool] = False
+    # If True, the orchestrator loads Pursuit Memory (similar opportunities,
+    # prior risks / discriminators / win themes from the knowledge graph) and
+    # passes a compact view as ``memory``. This is how the institutional
+    # memory layer powers reports — recalled items should be cited as
+    # "Historical Evidence" / "Pursuit Memory".
+    consumes_memory: ClassVar[bool] = False
 
     def __init__(
         self,
@@ -206,6 +212,54 @@ class BaseIntelligenceModule:
         profile = _safe_company_profile(cp, caps)
         return profile, _is_seller_incomplete(profile)
 
+    async def _load_pursuit_memory(
+        self, *, ctx: RAGContext
+    ) -> dict[str, Any] | None:
+        """Compact view of Pursuit Memory for prompt consumption.
+
+        Returns recalled, institutional knowledge so a report can fold prior
+        risks / discriminators / win themes in as Historical Evidence. Returns
+        None when there is no usable history yet.
+        """
+        # Imported lazily to avoid an import cycle (memory_service → graph →
+        # models, none of which should pull the intelligence base at import).
+        from app.services import memory_service
+
+        pm = await memory_service.build_pursuit_memory(
+            self.db,
+            workspace_id=ctx.workspace_id,
+            opportunity_id=ctx.opportunity_id,
+        )
+        if not pm.has_history:
+            return None
+
+        def _hist(items: Any) -> list[dict[str, Any]]:
+            return [
+                {"label": i.label, "frequency": i.frequency, "basis": i.basis}
+                for i in items
+                if i.basis == "historical"
+            ]
+
+        compact = {
+            "summary": pm.summary,
+            "similar_count": len(pm.similar_opportunities),
+            "similar_opportunities": [
+                {"name": s.name, "agency": s.agency, "reasons": s.reasons}
+                for s in pm.similar_opportunities
+            ],
+            "prior_risks": _hist(pm.prior_risks),
+            "prior_discriminators": _hist(pm.prior_discriminators),
+            "prior_win_themes": _hist(pm.prior_win_themes),
+            "inferences": pm.inferences,
+        }
+        # If nothing historical surfaced, don't bother the prompt.
+        if not any(
+            compact[k]
+            for k in ("prior_risks", "prior_discriminators", "prior_win_themes")
+        ):
+            return None
+        return compact
+
     async def extra_context(
         self, *, ctx: RAGContext, customer_dna: dict[str, Any] | None
     ) -> dict[str, Any]:
@@ -275,10 +329,15 @@ class BaseIntelligenceModule:
                 workspace_id=ctx.workspace_id
             )
 
-        # 4. Module-specific extra context (e.g. prior Evaluation Criteria)
+        # 4. Optionally load Pursuit Memory (institutional knowledge graph)
+        memory: dict[str, Any] | None = None
+        if self.consumes_memory:
+            memory = await self._load_pursuit_memory(ctx=ctx)
+
+        # 5. Module-specific extra context (e.g. prior Evaluation Criteria)
         extra = await self.extra_context(ctx=ctx, customer_dna=customer_dna)
 
-        # 5. Render prompt with opportunity + evidence + (optional) DNA + seller
+        # 6. Render prompt with opportunity + evidence + (optional) DNA + seller
         prompts = self.prompts
         system, user, _ = prompts.render(
             self.prompt_id,
@@ -289,6 +348,7 @@ class BaseIntelligenceModule:
             customer_dna=customer_dna,
             company_profile=company_profile,
             seller_incomplete=seller_incomplete,
+            memory=memory,
             **extra,
         )
 

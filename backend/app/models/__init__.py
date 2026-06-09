@@ -8,6 +8,7 @@ from app.models.base import Base
 from app.models.chat import ChatMessage, ChatThread
 from app.models.company_profile import Capability, CompanyProfile
 from app.models.document import Document, DocumentChunk
+from app.models.graph import GraphEdge, GraphEntity
 from app.models.intelligence import (
     AIOutput,
     ComplianceRequirement,
@@ -35,6 +36,8 @@ __all__ = [
     "Document",
     "DocumentChunk",
     "EvaluationCriterion",
+    "GraphEdge",
+    "GraphEntity",
     "MarketIntelRecord",
     "MarketIntelSource",
     "Opportunity",

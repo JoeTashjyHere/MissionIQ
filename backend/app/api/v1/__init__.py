@@ -9,6 +9,7 @@ from app.api.v1 import (
     exports,
     health,
     market_intel,
+    memory,
     modules,
     opportunities,
     users,
@@ -28,5 +29,6 @@ api_router.include_router(documents.router, tags=["documents"])
 api_router.include_router(market_intel.router, prefix="/market-intel", tags=["market-intel"])
 api_router.include_router(market_intel.links_router, tags=["market-intel"])
 api_router.include_router(modules.router, tags=["modules"])
+api_router.include_router(memory.router, tags=["memory"])
 api_router.include_router(chat.router, prefix="/chat", tags=["chat"])
 api_router.include_router(exports.router, tags=["exports"])

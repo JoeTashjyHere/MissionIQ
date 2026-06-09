@@ -1,6 +1,8 @@
-"""Orchestrates module runs: dispatch → persist → structured writeback → audit."""
+"""Orchestrates module runs: dispatch → persist → structured writeback →
+knowledge-graph ingestion → audit."""
 from __future__ import annotations
 
+import logging
 import uuid
 from typing import Any
 
@@ -8,7 +10,10 @@ from sqlalchemy import delete, desc, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.errors import NotFoundError
+from app.graph import service as graph_service
 from app.intelligence import get_registry
+
+logger = logging.getLogger(__name__)
 from app.intelligence.base import RAGContext
 from app.intelligence.citations import build_citations
 from app.intelligence.rag import RAGEngine
@@ -138,6 +143,25 @@ async def run_module(
                 output=result.output,
             )
         await db.flush()
+
+        # Knowledge-graph ingestion: every successful module contributes
+        # structured facts to the workspace's institutional memory. Auxiliary
+        # to the run — never let a graph hiccup fail the user's generation.
+        try:
+            await graph_service.ingest_module_output(
+                db,
+                workspace_id=workspace_id,
+                opp=opp,
+                module_id=cls.id,
+                output=result.output,
+            )
+            await db.flush()
+        except Exception:  # noqa: BLE001
+            logger.exception(
+                "knowledge-graph ingestion failed for module %s on opportunity %s",
+                cls.id,
+                opportunity_id,
+            )
 
     return AIOutputResponse(
         id=output_row.id,

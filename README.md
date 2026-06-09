@@ -150,6 +150,59 @@ Risk Register ┘     │  4. Key Discriminators       │
 
 ---
 
+### Institutional memory — the Knowledge Graph layer
+
+Reports above are *opportunity-specific*. The **Memory & Knowledge Graph** layer
+turns them into *institutional* intelligence so MissionIQ gets smarter with
+every opportunity processed. It is a reusable layer, **not another report**.
+
+```
+Every module run ──► extract structured facts ──► Knowledge Graph
+                                                   (workspace-scoped)
+        Entities: Agency · Program · Opportunity · Contract · Competitor
+                  Technology · Capability · Risk · Win Theme · Discriminator
+                  Contract Vehicle · Past Performance
+        Edges:    provenance-stamped (opportunity_id + module_id), idempotent
+
+Knowledge Graph ──► Memory service ──►  1. Pursuit Memory
+                                        2. Opportunity Similarity Engine
+                                        3. Historical Insight Repository
+                                        4. Agency Intelligence Repository
+                                            │
+                                            └──► powers future reports
+                                                 (Win Strategy consumes it)
+```
+
+**How it works:**
+
+- **Contribution.** After any module succeeds, `app/graph` extracts structured
+  facts and `graph_service.ingest_module_output` upserts deduplicated entities
+  and provenance-stamped edges. A module re-run replaces *only its own* edges, so
+  the graph never double-counts. Risk Register → risks; Capability Match →
+  discriminators / win themes / capability gaps; Win Strategy → win themes /
+  discriminators / competitors; Customer DNA enriches the Agency node; and the
+  opportunity record itself contributes agency / vehicle / incumbent.
+- **Recall.** When a new opportunity is analyzed, the **Opportunity Similarity
+  Engine** ranks prior pursuits by agency, sub-agency, NAICS, contract vehicle,
+  and shared technology/capability/competitor signals. **Pursuit Memory** then
+  surfaces prior risks, prior discriminators, and prior win themes drawn from
+  similar and same-agency pursuits.
+- **Epistemic honesty.** Every recalled item is tagged
+  `historical` (from prior pursuits), `current` (on this opportunity), or
+  `inference` (MissionIQ's aggregated judgment) — the platform-wide distinction
+  between **Historical Evidence**, **Current Opportunity Evidence**, and
+  **Inference**.
+- **Powers future reports.** Modules opt in with `consumes_memory = True`. The
+  flagship **Win Strategy** consumes Pursuit Memory and folds recurring prior
+  risks / discriminators / win themes into its assessment, citing
+  `Pursuit Memory` as Historical Evidence — distinct from current-document
+  evidence (`E<n>`).
+
+Surfaced read-only on the **Memory** tab (per opportunity) and the
+`GET /opportunities/{id}/memory` + `GET /workspaces/{id}/insights` endpoints.
+
+---
+
 ## Architecture Documents
 
 Read these in order before contributing:
@@ -288,13 +341,25 @@ provider configured the same path produces substantive output.
     confidence, `inputs_missing` banner), then generate the upstream modules
     and regenerate to watch confidence rise and assumptions become evidence.
     The recommendation also surfaces as the top card on the **Briefing** tab.
-12. **Intelligence Assistant tab** — start a thread. Try one of the suggested
+12. **Memory tab (institutional intelligence)** — open the **Memory** tab. Every
+    module you ran above contributed structured facts to the workspace
+    Knowledge Graph, so this page shows MissionIQ's recall for the pursuit:
+    **Similar Prior Pursuits** (ranked by agency / vehicle / NAICS / shared
+    signals), **Prior Risks · Prior Discriminators · Prior Win Themes**, an
+    **Agency Intelligence** panel, and what MissionIQ **infers**. Each item is
+    tagged **Historical Evidence**, **Current Opportunity**, or **Inference**.
+    Create and analyze a second opportunity for the same agency, then revisit
+    this tab to watch similar pursuits and recurring intelligence appear — and
+    re-run **Win Strategy**, which now cites **Pursuit Memory** as Historical
+    Evidence. Workspace-wide reuse is also exposed at
+    `GET /workspaces/{id}/insights`.
+13. **Intelligence Assistant tab** — start a thread. Try one of the suggested
    questions. Each answer carries a **Grounded** / **Insufficient context**
    status pill, lists source citations as `[1] [2] …` chips, and shows
    which model produced it. If you ask before any document is `ready`,
     the Assistant refuses *before* calling the LLM. The refusal is
     audit-logged as `chat.message.refused`.
-13. **Audit trail** — every user-visible action above produces an
+14. **Audit trail** — every user-visible action above produces an
     `audit_log` row (`document.uploaded`,
     `document.processing.parsing/chunking/embedding/ready/failed`,
     `ai.module.run`, `chat.message.received`, `chat.message.sent`,
@@ -372,6 +437,7 @@ npm run dev
 ✅ **Capture: Capability Match** module — senior-capture-lead fit assessment comparing Customer DNA × opportunity requirements × evaluation criteria × market intelligence × Company Profile, producing strong/weak fit, missing capabilities, required proof points, teaming recommendations, discriminators, win themes, capture questions, and company-gap proposal risks; refuses to overclaim when seller data is incomplete (`seller_data_complete = false`)
 ✅ **Seller-side Company Profile** expanded with contract vehicles, technology partners, case studies, key personnel, geographic footprint, security posture, delivery model, and pricing posture (editable on the Company Profile page); downstream modules optionally consume it (`consumes_company_profile`)
 ✅ **Capture: Win Strategy** module (flagship) — gate-review synthesis of Customer DNA, Company DNA, opportunity documents, evaluation criteria, Capability Match, market intelligence, and risks into Executive Pursuit Recommendation, Strengths, Weaknesses, Key Discriminators, Black Hat Assessment, Likely Evaluator Concerns, Win Themes, Competitive Assessment, Critical Capture Actions, and a 0–100 Win Confidence call. Every point is tagged evidence / inference / assumption with cited sources; partial inputs dampen confidence rather than fabricate evidence
+✅ **Memory & Knowledge Graph** layer — a workspace-scoped institutional graph (Agency · Program · Opportunity · Contract · Competitor · Technology · Capability · Risk · Win Theme · Discriminator · Contract Vehicle · Past Performance) that every module contributes provenance-stamped facts to on success (idempotent ingestion). Powers four reusable capabilities — **Pursuit Memory**, the **Opportunity Similarity Engine**, the **Historical Insight Repository**, and the **Agency Intelligence Repository** — surfaced on the per-opportunity **Memory** tab and consumed by Win Strategy (`consumes_memory`), with every item tagged **Historical Evidence / Current Opportunity / Inference**
 ✅ **Intelligence Assistant** with hard grounding contract: refuses to call the LLM when no documents are indexed or retrieval returns no hits; every answer carries citations and a status pill
 ✅ SAM.gov market intelligence client + search + import + link-to-opportunity
 ✅ CSV exports (Compliance, Risks) — populated by the structured writeback path
@@ -380,7 +446,7 @@ npm run dev
 ✅ Platform shell with module-aware left nav and stubbed module groups
 ✅ Pages: Login, Signup, Dashboard, Workspaces, Opportunity list/detail, Documents, Module workbenches, Market Intelligence, Assistant
 ✅ Seed script with example opportunity + example documents
-✅ Unit tests for auth, workspace scoping, LLM router, RAG, document status state machine, Opportunity Summary contract, Customer DNA contract, the DNA-prerequisite enforcement for downstream modules, the Company DNA + Capability Match contracts, the seller-data anti-overclaim guarantee, and the Win Strategy synthesis contract (basis tagging + partial-input confidence dampening)
+✅ Unit tests for auth, workspace scoping, LLM router, RAG, document status state machine, Opportunity Summary contract, Customer DNA contract, the DNA-prerequisite enforcement for downstream modules, the Company DNA + Capability Match contracts, the seller-data anti-overclaim guarantee, the Win Strategy synthesis contract (basis tagging + partial-input confidence dampening + Pursuit Memory consumption), and the Memory/Knowledge-Graph layer (fact extraction, entity normalization/dedup, similarity scoring, and Historical/Current/Inference basis classification)
 
 📋 Remaining Capture modules (Requirement Breakdown, Win Themes, Staffing Assumptions, Proposal Outline, Market Intel Summary) — each follows the same ~80-line pattern as the modules already shipped.
 
@@ -412,7 +478,13 @@ The platform is module-pluggable. To add (e.g.) `capture.win_themes`:
    context (optional — the module still runs without a profile, but should
    label seller-side claims as assumptions when `seller_incomplete` is true).
    Override `extra_context()` if you need to inject prior module outputs
-   (Capability Match does this to pull the latest Evaluation Criteria).
+   (Capability Match does this to pull the latest Evaluation Criteria). Set
+   `consumes_memory = True` to receive a compact **Pursuit Memory** view
+   (`memory`) — prior risks / discriminators / win themes recalled from similar
+   pursuits — which the prompt should cite as Historical Evidence (Win Strategy
+   does this). To contribute facts back to the Knowledge Graph, add an
+   extractor branch in `backend/app/graph/extract.py`; ingestion runs
+   automatically on every successful module run.
 3. Register it in `backend/app/intelligence/registry.py`.
 4. Define a Pydantic `*Output` schema in `backend/app/schemas/intelligence.py`
    and bind it to the module via `output_model`. The orchestrator

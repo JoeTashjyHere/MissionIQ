@@ -60,6 +60,10 @@ class WinStrategyModule(BaseIntelligenceModule):
     minimum_evidence = 1
     requires_customer_dna = True
     consumes_company_profile = True
+    # Consume institutional memory: prior risks, discriminators, and win
+    # themes recalled from similar pursuits are folded in as Historical
+    # Evidence so the strategy gets sharper with every opportunity processed.
+    consumes_memory = True
 
     async def extra_context(
         self, *, ctx: RAGContext, customer_dna: dict[str, Any] | None

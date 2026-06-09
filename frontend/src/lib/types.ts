@@ -435,6 +435,65 @@ export interface Capability {
   evidence_links: string[] | null;
 }
 
+// ── Memory + Knowledge Graph ─────────────────────────────────────────────
+export type MemoryBasis = "historical" | "current" | "inference";
+
+export interface SourceOpportunity {
+  id: Uuid;
+  name: string;
+}
+
+export interface MemoryItem {
+  label: string;
+  basis: MemoryBasis;
+  entity_type?: string | null;
+  detail?: string | null;
+  frequency: number;
+  source_opportunities: SourceOpportunity[];
+  attributes: Record<string, unknown>;
+}
+
+export interface SimilarOpportunity {
+  opportunity_id: Uuid;
+  name: string;
+  agency?: string | null;
+  score: number;
+  reasons: string[];
+  shared_entities: number;
+}
+
+export interface AgencyIntelligence {
+  agency?: string | null;
+  mission?: string | null;
+  strategic_goals: string[];
+  opportunities_count: number;
+  recurring_risks: MemoryItem[];
+  recurring_win_themes: MemoryItem[];
+  known_competitors: MemoryItem[];
+}
+
+export interface PursuitMemory {
+  opportunity_id: Uuid;
+  opportunity_name: string;
+  has_history: boolean;
+  summary: string;
+  similar_opportunities: SimilarOpportunity[];
+  prior_risks: MemoryItem[];
+  prior_discriminators: MemoryItem[];
+  prior_win_themes: MemoryItem[];
+  agency_intelligence?: AgencyIntelligence | null;
+  inferences: string[];
+  graph_stats: Record<string, number>;
+}
+
+export interface HistoricalInsightRepository {
+  win_themes: MemoryItem[];
+  discriminators: MemoryItem[];
+  risks: MemoryItem[];
+  competitors: MemoryItem[];
+  graph_stats: Record<string, number>;
+}
+
 export interface ChatThread {
   id: Uuid;
   workspace_id: Uuid;

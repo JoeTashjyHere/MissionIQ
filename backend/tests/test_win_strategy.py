@@ -98,7 +98,7 @@ def _evidence():
     ]
 
 
-def _render(*, full: bool):
+def _render(*, full: bool, memory: dict | None = None):
     prompts = get_prompt_library()
     _, user, _ = prompts.render(
         "capture.win_strategy",
@@ -109,6 +109,7 @@ def _render(*, full: bool):
         customer_dna=_DNA,
         company_profile=None,
         seller_incomplete=not full,
+        memory=memory,
         company_dna=_COMPANY_DNA if full else None,
         capability_match=_CAP_MATCH if full else None,
         evaluation_criteria=_EVAL if full else None,
@@ -124,6 +125,29 @@ def test_win_strategy_registered_with_flags():
     assert get_registry().get("capture.win_strategy") is WinStrategyModule
     assert WinStrategyModule.requires_customer_dna is True
     assert WinStrategyModule.consumes_company_profile is True
+    assert WinStrategyModule.consumes_memory is True
+
+
+def test_prompt_folds_in_pursuit_memory_as_historical_evidence():
+    memory = {
+        "summary": "MissionIQ recalled 2 similar prior pursuit(s) for DHS.",
+        "similar_count": 2,
+        "similar_opportunities": [
+            {"name": "DHS SOC Recompete", "agency": "DHS", "reasons": ["Same agency: DHS"]}
+        ],
+        "prior_risks": [{"label": "Aggressive transition timeline", "frequency": 3, "basis": "historical"}],
+        "prior_discriminators": [{"label": "Cleared 24x7 SOC bench", "frequency": 2, "basis": "historical"}],
+        "prior_win_themes": [{"label": "Zero-downtime transition", "frequency": 2, "basis": "historical"}],
+        "inferences": ["Treat the transition timeline as a standing risk."],
+    }
+    user = _render(full=True, memory=memory)
+    assert "PURSUIT MEMORY" in user
+    assert "Aggressive transition timeline" in user
+    assert "Zero-downtime transition" in user
+    assert "Historical Evidence" in user
+    # No history → graceful net-new message.
+    empty = _render(full=True, memory=None)
+    assert "no prior pursuit history yet" in empty.lower()
 
 
 # ── Prompt is synthesis, not summary ───────────────────────────────────────

@@ -34,6 +34,7 @@ system: |
             "E<n>"                         (opportunity document evidence)
             "M<n>"                         (market intelligence)
             "Capability Match", "Evaluation Criteria", "Risk Register"
+            "Pursuit Memory"               (institutional knowledge from prior pursuits)
        An "evidence" point MUST have at least one source. An "assumption"
        should have an empty or minimal source list and be phrased as a belief
        to validate.
@@ -44,6 +45,13 @@ system: |
      When a key input (Company DNA, Capability Match) is missing, lower the
      win-confidence and lean on `inference`/`assumption` rather than faking
      `evidence`.
+  6. Reuse institutional memory. When PURSUIT MEMORY surfaces a prior risk,
+     discriminator, or win theme that recurs across past pursuits, fold it in
+     and cite "Pursuit Memory" as the source. A recalled item proven on a
+     prior pursuit is HISTORICAL EVIDENCE — use `basis: "evidence"`. Do not,
+     however, treat the current opportunity's facts and historical recall as
+     the same thing; distinguish Historical Evidence (Pursuit Memory) from
+     Current Opportunity Evidence (E<n>) in your sources.
 
   PRODUCE (the ten gate-review sections):
    1. executive_pursuit_recommendation — the headline call and the 2–4
@@ -134,6 +142,40 @@ user: |
   Top risks: {{ risk_register.top_risks | join("; ") if risk_register.top_risks else "(n/a)" }}
   {% else %}
   RISK REGISTER: *** MISSING — recommend running the Risk Register. ***
+  {% endif %}
+
+  {% if memory %}
+  PURSUIT MEMORY  (institutional knowledge recalled from prior pursuits)
+  ─────────────────────────────────────────────────────────────────────
+  {{ memory.summary }}
+  {% if memory.similar_opportunities %}
+  Similar prior pursuits:
+  {% for s in memory.similar_opportunities %}
+    - {{ s.name }}{% if s.agency %} ({{ s.agency }}){% endif %} — {{ s.reasons | join("; ") }}
+  {% endfor %}
+  {% endif %}
+  {% if memory.prior_risks %}
+  Prior risks (recurred on past pursuits — Historical Evidence):
+  {% for r in memory.prior_risks %}
+    - {{ r.label }} (seen on {{ r.frequency }} prior pursuit{{ "s" if r.frequency != 1 else "" }})
+  {% endfor %}
+  {% endif %}
+  {% if memory.prior_discriminators %}
+  Prior discriminators (reusable — Historical Evidence):
+  {% for d in memory.prior_discriminators %}
+    - {{ d.label }} (used on {{ d.frequency }} prior pursuit{{ "s" if d.frequency != 1 else "" }})
+  {% endfor %}
+  {% endif %}
+  {% if memory.prior_win_themes %}
+  Prior win themes (proven — Historical Evidence):
+  {% for w in memory.prior_win_themes %}
+    - {{ w.label }} (used on {{ w.frequency }} prior pursuit{{ "s" if w.frequency != 1 else "" }})
+  {% endfor %}
+  {% endif %}
+  Fold the recurring items above into your strategy and cite "Pursuit Memory".
+  {% else %}
+  PURSUIT MEMORY: (no prior pursuit history yet — this is net-new institutional
+  ground; nothing to recall.)
   {% endif %}
 
   OPPORTUNITY DOCUMENT EVIDENCE
