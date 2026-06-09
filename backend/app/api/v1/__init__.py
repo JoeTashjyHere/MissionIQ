@@ -3,8 +3,10 @@ from fastapi import APIRouter
 
 from app.api.v1 import (
     auth,
+    automation,
     chat,
     company_profile,
+    connectors,
     documents,
     exports,
     health,
@@ -32,3 +34,5 @@ api_router.include_router(modules.router, tags=["modules"])
 api_router.include_router(memory.router, tags=["memory"])
 api_router.include_router(chat.router, prefix="/chat", tags=["chat"])
 api_router.include_router(exports.router, tags=["exports"])
+api_router.include_router(connectors.router, tags=["connectors"])
+api_router.include_router(automation.router, tags=["automation"])

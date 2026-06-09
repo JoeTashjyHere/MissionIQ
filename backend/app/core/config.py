@@ -90,6 +90,11 @@ class Settings(BaseSettings):
     sam_gov_api_key: str | None = Field(default=None, alias="SAM_GOV_API_KEY")
     sam_gov_base_url: str = Field(default="https://api.sam.gov", alias="SAM_GOV_BASE_URL")
 
+    # Connector credential encryption key (urlsafe base64, 32 bytes). When
+    # unset, a key is derived from MIQ_JWT_SECRET (dev convenience; set a
+    # dedicated key in production so secrets and signing keys rotate apart).
+    credential_key: str | None = Field(default=None, alias="MIQ_CREDENTIAL_KEY")
+
     max_upload_bytes: int = Field(default=52_428_800, alias="MIQ_MAX_UPLOAD_BYTES")
     workspace_storage_quota_bytes: int = Field(
         default=5_368_709_120, alias="MIQ_WORKSPACE_STORAGE_QUOTA_BYTES"

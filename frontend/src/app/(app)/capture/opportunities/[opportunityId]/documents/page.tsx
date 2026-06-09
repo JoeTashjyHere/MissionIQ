@@ -10,6 +10,7 @@ import { StatusPill } from "@/components/ds/StatusPill";
 import { Select } from "@/components/ds/Select";
 import { Skeleton } from "@/components/ds/Skeleton";
 import { ProgressBar } from "@/components/ds/ProgressBar";
+import { ProvenanceBadge } from "@/components/ds/ProvenanceBadge";
 import { EmptyState } from "@/components/ds/EmptyState";
 import { formatDateTime } from "@/lib/format";
 import { FileText, UploadCloud } from "lucide-react";
@@ -232,6 +233,15 @@ export default function DocumentsPage({
                         </div>
                       </div>
                     </div>
+                  ),
+                },
+                {
+                  key: "source",
+                  header: "Source",
+                  render: (d) => (
+                    <ProvenanceBadge
+                      source={d.source_type === "connector" ? "connector" : "user_upload"}
+                    />
                   ),
                 },
                 {

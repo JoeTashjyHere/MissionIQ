@@ -15,6 +15,7 @@ import { KpiCard } from "@/components/ds/KpiCard";
 import { Card, CardBody, CardHeader } from "@/components/ds/Card";
 import { StatusPill } from "@/components/ds/StatusPill";
 import { Button } from "@/components/ds/Button";
+import { ProvenanceBadge } from "@/components/ds/ProvenanceBadge";
 import { Skeleton } from "@/components/ds/Skeleton";
 import { Sparkles } from "lucide-react";
 import {
@@ -88,6 +89,9 @@ export default function OpportunityBriefingPage({
             {opp.estimated_value_cents != null && (
               <span>{formatCurrencyCents(opp.estimated_value_cents)}</span>
             )}
+            <ProvenanceBadge
+              source={opp.source_type === "connector" ? "connector" : "user_upload"}
+            />
           </div>
         }
         actions={

@@ -7,6 +7,12 @@ from app.models.audit import AuditLog
 from app.models.base import Base
 from app.models.chat import ChatMessage, ChatThread
 from app.models.company_profile import Capability, CompanyProfile
+from app.models.connector import (
+    AutomationRun,
+    Connector,
+    ConnectorCredential,
+    ConnectorSyncJob,
+)
 from app.models.document import Document, DocumentChunk
 from app.models.graph import GraphEdge, GraphEntity
 from app.models.intelligence import (
@@ -27,12 +33,16 @@ from app.models.workspace import TeamMember, Workspace
 __all__ = [
     "AIOutput",
     "AuditLog",
+    "AutomationRun",
     "Base",
     "Capability",
     "ChatMessage",
     "ChatThread",
     "ComplianceRequirement",
     "CompanyProfile",
+    "Connector",
+    "ConnectorCredential",
+    "ConnectorSyncJob",
     "Document",
     "DocumentChunk",
     "EvaluationCriterion",

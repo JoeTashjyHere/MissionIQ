@@ -57,6 +57,8 @@ export interface Opportunity {
   capture_stage: string;
   incumbent: string | null;
   notes: string | null;
+  source_type: SourceType;
+  source_connector_id: Uuid | null;
   created_at: string;
   updated_at: string;
 }
@@ -97,6 +99,8 @@ export interface DocumentRecord {
   error_message: string | null;
   uploaded_at: string | null;
   processed_at: string | null;
+  source_type: SourceType;
+  source_connector_id: Uuid | null;
   created_at: string;
   updated_at: string;
 }
@@ -650,4 +654,133 @@ export interface BidDecisionOutput {
   historical_evidence: HistoricalEvidence;
   inputs_used?: string[];
   inputs_missing?: string[];
+}
+
+// ── Integrations: Connectors & Pursuit Automation ──────────────────────────
+
+export type SourceType = "user_upload" | "connector";
+
+export type ConnectorStatus =
+  | "connected"
+  | "disconnected"
+  | "syncing"
+  | "failed"
+  | "disabled";
+
+export type SyncJobStatus =
+  | "queued"
+  | "connecting"
+  | "discovering"
+  | "ingesting"
+  | "succeeded"
+  | "partial"
+  | "failed";
+
+export interface ConnectorProviderSpec {
+  provider_id: string;
+  label: string;
+  description: string;
+  connector_type: string;
+  auth_mode: string;
+  phase: number;
+  implemented: boolean;
+  provides_opportunities: boolean;
+  provides_documents: boolean;
+  requires_customer_authorization: boolean;
+  config_fields: {
+    key: string;
+    label: string;
+    placeholder?: string;
+    required?: boolean;
+  }[];
+}
+
+export interface Connector {
+  id: Uuid;
+  workspace_id: Uuid;
+  provider_id: string;
+  connector_type: string;
+  name: string;
+  status: ConnectorStatus;
+  config: Record<string, string>;
+  auto_create_pursuits: boolean;
+  auto_run_automation: boolean;
+  last_sync_at: string | null;
+  last_success_at: string | null;
+  consecutive_failures: number;
+  created_at: string;
+  updated_at: string;
+  credential_set: boolean;
+  credential_type: string;
+  last_validated_at: string | null;
+}
+
+export interface ConnectorTestResult {
+  ok: boolean;
+  message: string;
+  checked_at: string;
+}
+
+export interface SyncJob {
+  id: Uuid;
+  connector_id: Uuid;
+  workspace_id: Uuid;
+  trigger: string;
+  status: SyncJobStatus;
+  progress_pct: number;
+  stats: Record<string, number>;
+  started_at: string | null;
+  finished_at: string | null;
+  error_message: string | null;
+  created_at: string;
+  connector_name: string | null;
+  provider_id: string | null;
+}
+
+export interface ConnectorHealthSummary {
+  total: number;
+  connected: number;
+  syncing: number;
+  failed: number;
+  disabled: number;
+  disconnected: number;
+  jobs_24h: number;
+  failed_jobs_24h: number;
+  automation_runs_24h: number;
+  connectors: Connector[];
+}
+
+export type AutomationStatus =
+  | "queued"
+  | "running"
+  | "succeeded"
+  | "partial"
+  | "failed";
+
+export interface AutomationStepResult {
+  step_id: string;
+  label: string;
+  status: "pending" | "running" | "succeeded" | "skipped" | "failed";
+  attempts: number;
+  started_at: string | null;
+  finished_at: string | null;
+  error: string | null;
+  ai_output_id: string | null;
+  detail: string | null;
+}
+
+export interface AutomationRun {
+  id: Uuid;
+  workspace_id: Uuid;
+  opportunity_id: Uuid;
+  trigger: "connector" | "manual";
+  status: AutomationStatus;
+  current_step: string | null;
+  steps: AutomationStepResult[];
+  started_at: string | null;
+  finished_at: string | null;
+  error_message: string | null;
+  connector_sync_job_id: Uuid | null;
+  created_at: string;
+  opportunity_name: string | null;
 }

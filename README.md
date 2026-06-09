@@ -251,6 +251,62 @@ deep-link into the currently open opportunity and otherwise route to the
 Opportunities list. Routes are unchanged — only the information architecture was
 reorganized.
 
+### Connectors & Pursuit Workspace Automation
+
+MissionIQ's next evolution beyond document uploads: **automated intelligence
+collection**. A connector framework plus a pursuit automation engine mean a
+future Salesforce opportunity automatically becomes a fully populated MissionIQ
+pursuit workspace — with minimal user intervention.
+
+**Connector framework** (`backend/app/connectors/`) — the integrations mirror
+of the intelligence module registry. Provider *behavior* lives in a code-side
+registry; per-workspace *instances* live in the database (`connector`,
+`connector_credential`, `connector_sync_job`). Providers implement three
+normalized operations (`test_connection`, `discover`, `fetch_document`) against
+pure data shapes, so the sync engine never touches provider wire formats.
+
+- **Connector states**: connected · disconnected · syncing · failed · disabled.
+- **Connector types**: CRM, document repository, market intelligence, project
+  management, knowledge management.
+- **Phase 1 (implemented)**: Salesforce and SharePoint as deterministic mock
+  providers (the `local_stub` philosophy — the entire pipeline is demoable and
+  testable offline), plus a fully real **Local Repository** connector that
+  ingests pursuit directories from disk through the existing document pipeline.
+- **Phase 2/3 (extension points)**: GovWin (customer-authorized only),
+  Bloomberg Government, ServiceNow, Dynamics, and Jira are registered catalog
+  descriptors (`implemented = False`) — they appear in the UI as planned
+  integrations and refuse execution with a structured error until implemented.
+- **Credentials** are encrypted at rest (Fernet; `MIQ_CREDENTIAL_KEY`, with a
+  dev fallback derived from the JWT secret) and are write-only through the API.
+
+**Sync engine** — a `ConnectorSyncJob` advances through an explicit state
+machine (`queued → connecting → discovering → ingesting → succeeded | partial |
+failed`) in a background task, exactly like document processing. Discovered
+opportunities upsert idempotently on `(workspace, connector, external_id)`;
+discovered documents flow through the existing ingestion pipeline with
+connector provenance stamped on every row.
+
+**Pursuit Automation Orchestrator** (`automation_run`) — a declarative step
+plan executed with per-step retries, partial-failure handling, and a full audit
+trail: pursuit ready → documents settled → market intelligence association →
+**Customer DNA → Company DNA → Capability Match → Win Strategy → Executive
+Brief**. Customer DNA is a critical step (its failure skips downstream modules,
+preserving the dependency chain), and a module that honestly reports
+`insufficient_context` completes its step — automation never fabricates inputs.
+Failed runs can be retried from the first failed step.
+
+**Data provenance** — every opportunity and document records its source
+(`user_upload` or `connector` + connector id + external id), and the UI renders
+a `ProvenanceBadge` for the five platform provenance categories (User Uploaded,
+Connector Ingested, Public Market Intelligence, Historical Memory, Generated
+Intelligence) on documents, pursuit headers, and beyond.
+
+**Integrations navigation + observability** — a new left-nav section with three
+pages: **Connectors** (catalog + configuration + sync/test/disable),
+**Sync History** (live-polling job table with progress, stats, durations, and
+errors), and **Connector Health** (KPI banner, per-connector health, and
+pursuit automation runs with per-step status and one-click retry).
+
 ---
 
 ## Architecture Documents
@@ -489,7 +545,12 @@ npm run dev
 ✅ **Capture: Win Strategy** module (flagship) — gate-review synthesis of Customer DNA, Company DNA, opportunity documents, evaluation criteria, Capability Match, market intelligence, and risks into Executive Pursuit Recommendation, Strengths, Weaknesses, Key Discriminators, Black Hat Assessment, Likely Evaluator Concerns, Win Themes, Competitive Assessment, Critical Capture Actions, and a 0–100 Win Confidence call. Every point is tagged evidence / inference / assumption with cited sources; partial inputs dampen confidence rather than fabricate evidence
 ✅ **Memory & Knowledge Graph** layer — a workspace-scoped institutional graph (Agency · Program · Opportunity · Contract · Competitor · Technology · Capability · Risk · Win Theme · Discriminator · Contract Vehicle · Past Performance) that every module contributes provenance-stamped facts to on success (idempotent ingestion). Powers four reusable capabilities — **Pursuit Memory**, the **Opportunity Similarity Engine**, the **Historical Insight Repository**, and the **Agency Intelligence Repository** — surfaced on the per-opportunity **Memory** tab and consumed by Win Strategy (`consumes_memory`), with every item tagged **Historical Evidence / Current Opportunity / Inference**
 ✅ **Briefings: Executive Brief / Gate Review / Bid · No-Bid Decision** modules — leadership decision packages that synthesize every upstream output (Customer DNA, Company DNA, Capability Match, Evaluation & Risk Intelligence, Win Strategy, market intelligence, Pursuit Memory) into a one-screen executive brief, a scored gate-review package, and a focused bid/no-bid call. Every statement is tagged Evidence / Inference / Assumption; recalled intelligence is labeled Historical Evidence; partial inputs dampen confidence. Built on a modular, slide-mappable briefing design system (`components/briefings`) ready for PowerPoint / PDF / Word export
-✅ **Platform navigation** reorganized around capabilities (Win · Deliver · Improve): Capture Intelligence · Briefings · Memory · Market Intelligence · Platform · Future Modules, with opportunity-scoped sections that deep-link into the open pursuit (routes unchanged)
+✅ **Platform navigation** reorganized around capabilities (Win · Deliver · Improve): Capture Intelligence · Briefings · Memory · Market Intelligence · Integrations · Platform · Future Modules, with opportunity-scoped sections that deep-link into the open pursuit (routes unchanged)
+✅ **Connector framework** — code-side provider registry (the integrations mirror of the module registry) + workspace-scoped instances with encrypted credentials, an explicit connector state machine (connected · disconnected · syncing · failed · disabled), all five connector types, Phase 1 providers (mock Salesforce CRM, mock SharePoint, fully real Local Repository), and Phase 2/3 extension-point descriptors (GovWin customer-authorized-only, Bloomberg Government, ServiceNow, Dynamics, Jira)
+✅ **Connector sync engine** — background sync jobs advancing through `queued → connecting → discovering → ingesting → succeeded / partial / failed` with per-stage audit events, idempotent pursuit upserts keyed on the external record, and connector documents ingested through the existing document pipeline with provenance stamped
+✅ **Pursuit Automation Orchestrator** — declarative step plan (pursuit ready → documents settled → market intel association → Customer DNA → Company DNA → Capability Match → Win Strategy → Executive Brief) with per-step retries, critical-step abort preserving the DNA dependency chain, partial-failure semantics, honest handling of `insufficient_context`, resumable retry from the first failed step, and a full audit trail
+✅ **Data provenance** — `source_type` / `source_connector_id` / `source_external_id` on opportunities and documents plus a `ProvenanceBadge` rendering the five platform provenance categories (User Uploaded · Connector Ingested · Public Market Intelligence · Historical Memory · Generated Intelligence) across the UI
+✅ **Integrations observability** — Connectors (catalog + configure + sync/test/disable), Sync History (live-polling job table with progress, stats, durations, errors), and Connector Health (KPI banner, per-connector health, automation runs with per-step status dots and one-click retry)
 ✅ **Intelligence Assistant** with hard grounding contract: refuses to call the LLM when no documents are indexed or retrieval returns no hits; every answer carries citations and a status pill
 ✅ SAM.gov market intelligence client + search + import + link-to-opportunity
 ✅ CSV exports (Compliance, Risks) — populated by the structured writeback path
@@ -498,7 +559,7 @@ npm run dev
 ✅ Platform shell with module-aware left nav and stubbed module groups
 ✅ Pages: Login, Signup, Dashboard, Workspaces, Opportunity list/detail, Documents, Module workbenches, Market Intelligence, Assistant
 ✅ Seed script with example opportunity + example documents
-✅ Unit tests for auth, workspace scoping, LLM router, RAG, document status state machine, Opportunity Summary contract, Customer DNA contract, the DNA-prerequisite enforcement for downstream modules, the Company DNA + Capability Match contracts, the seller-data anti-overclaim guarantee, the Win Strategy synthesis contract (basis tagging + partial-input confidence dampening + Pursuit Memory consumption), the Memory/Knowledge-Graph layer (fact extraction, entity normalization/dedup, similarity scoring, and Historical/Current/Inference basis classification), and the Executive Briefings & Gate Reviews contracts (registration/flags, decision-not-summary prompts, schema-valid stub output, Historical Evidence from memory, and partial-input confidence dampening)
+✅ Unit tests for auth, workspace scoping, LLM router, RAG, document status state machine, Opportunity Summary contract, Customer DNA contract, the DNA-prerequisite enforcement for downstream modules, the Company DNA + Capability Match contracts, the seller-data anti-overclaim guarantee, the Win Strategy synthesis contract (basis tagging + partial-input confidence dampening + Pursuit Memory consumption), the Memory/Knowledge-Graph layer (fact extraction, entity normalization/dedup, similarity scoring, and Historical/Current/Inference basis classification), and the Executive Briefings & Gate Reviews contracts (registration/flags, decision-not-summary prompts, schema-valid stub output, Historical Evidence from memory, and partial-input confidence dampening), plus the Connectors & Automation contracts (provider registry and phase/extension-point guarantees, deterministic mock providers, real Local Repository discovery with path-escape protection, credential encryption round-trips, sync/automation state-machine and migration drift checks, and the orchestrator's retry / critical-abort / partial-failure / resume / epistemic-honesty semantics)
 
 📋 Remaining Capture modules (Requirement Breakdown, Win Themes, Staffing Assumptions, Proposal Outline, Market Intel Summary) — each follows the same ~80-line pattern as the modules already shipped.
 

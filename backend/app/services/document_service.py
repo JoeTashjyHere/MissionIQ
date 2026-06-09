@@ -27,11 +27,14 @@ async def upload_document(
     *,
     workspace_id: uuid.UUID,
     opportunity_id: uuid.UUID,
-    user_id: uuid.UUID,
+    user_id: uuid.UUID | None,
     filename: str,
     mime_type: str,
     data: bytes,
     doc_type: str,
+    source_type: str = "user_upload",
+    source_connector_id: uuid.UUID | None = None,
+    source_external_id: str | None = None,
 ) -> Document:
     settings = get_settings()
     if len(data) > settings.max_upload_bytes:
@@ -84,6 +87,9 @@ async def upload_document(
         stage_started_at=datetime.now(UTC),
         uploaded_by_user_id=user_id,
         uploaded_at=datetime.now(UTC),
+        source_type=source_type,
+        source_connector_id=source_connector_id,
+        source_external_id=source_external_id,
     )
     db.add(doc)
     await db.flush()

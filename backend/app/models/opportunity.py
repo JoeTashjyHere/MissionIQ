@@ -4,7 +4,16 @@ from __future__ import annotations
 import uuid
 from datetime import datetime
 
-from sqlalchemy import BigInteger, CheckConstraint, DateTime, ForeignKey, Index, String, Text
+from sqlalchemy import (
+    BigInteger,
+    CheckConstraint,
+    DateTime,
+    ForeignKey,
+    Index,
+    String,
+    Text,
+    text,
+)
 from sqlalchemy.dialects.postgresql import UUID as PG_UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -30,9 +39,22 @@ class Opportunity(UUIDPkMixin, TimestampMixin, Base):
             f"capture_stage IN {CAPTURE_STAGES!r}",
             name="ck_opportunity_stage",
         ),
+        CheckConstraint(
+            "source_type IN ('user_upload', 'connector')",
+            name="ck_opportunity_source_type",
+        ),
         Index("ix_opp_ws_stage", "workspace_id", "capture_stage"),
         Index("ix_opp_ws_due", "workspace_id", "due_date"),
         Index("ix_opp_ws_agency", "workspace_id", "agency"),
+        # Idempotent connector upserts: one pursuit per external record.
+        Index(
+            "uq_opp_connector_external",
+            "workspace_id",
+            "source_connector_id",
+            "source_external_id",
+            unique=True,
+            postgresql_where=text("source_connector_id IS NOT NULL"),
+        ),
     )
 
     workspace_id: Mapped[uuid.UUID] = mapped_column(
@@ -60,6 +82,15 @@ class Opportunity(UUIDPkMixin, TimestampMixin, Base):
     created_by_user_id: Mapped[uuid.UUID | None] = mapped_column(
         PG_UUID(as_uuid=True), ForeignKey("user.id")
     )
+
+    # Data provenance: who put this pursuit into MissionIQ.
+    source_type: Mapped[str] = mapped_column(
+        String(20), nullable=False, default="user_upload", server_default="user_upload"
+    )
+    source_connector_id: Mapped[uuid.UUID | None] = mapped_column(
+        PG_UUID(as_uuid=True), ForeignKey("connector.id", ondelete="SET NULL")
+    )
+    source_external_id: Mapped[str | None] = mapped_column(String(200))
 
     workspace = relationship("Workspace", back_populates="opportunities")
     documents = relationship(

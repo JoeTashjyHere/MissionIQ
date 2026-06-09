@@ -53,6 +53,10 @@ class Document(UUIDPkMixin, TimestampMixin, Base):
     __table_args__ = (
         CheckConstraint(f"doc_type IN {DOC_TYPES!r}", name="ck_document_type"),
         CheckConstraint(f"status IN {DOC_STATUSES!r}", name="ck_document_status"),
+        CheckConstraint(
+            "source_type IN ('user_upload', 'connector')",
+            name="ck_document_source_type",
+        ),
         Index("ix_doc_ws_opp", "workspace_id", "opportunity_id"),
         Index("ix_doc_ws_sha", "workspace_id", "sha256"),
     )
@@ -86,6 +90,15 @@ class Document(UUIDPkMixin, TimestampMixin, Base):
     uploaded_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     processed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     deleted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+
+    # Data provenance: who put this document into MissionIQ.
+    source_type: Mapped[str] = mapped_column(
+        String(20), nullable=False, default="user_upload", server_default="user_upload"
+    )
+    source_connector_id: Mapped[uuid.UUID | None] = mapped_column(
+        PG_UUID(as_uuid=True), ForeignKey("connector.id", ondelete="SET NULL")
+    )
+    source_external_id: Mapped[str | None] = mapped_column(String(200))
 
     opportunity = relationship("Opportunity", back_populates="documents")
     chunks = relationship(

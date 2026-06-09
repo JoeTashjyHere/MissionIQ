@@ -64,6 +64,8 @@ class OpportunityResponse(ORMModel):
     capture_stage: str
     incumbent: str | None
     notes: str | None
+    source_type: str = "user_upload"
+    source_connector_id: uuid.UUID | None = None
     created_at: datetime
     updated_at: datetime
 

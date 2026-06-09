@@ -30,6 +30,8 @@ class DocumentResponse(ORMModel):
     error_message: str | None
     uploaded_at: datetime | None
     processed_at: datetime | None
+    source_type: str = "user_upload"
+    source_connector_id: uuid.UUID | None = None
     created_at: datetime
     updated_at: datetime
 

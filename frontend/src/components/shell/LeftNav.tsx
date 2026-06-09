@@ -8,6 +8,7 @@ import {
   Globe2,
   LayoutGrid,
   Network,
+  Plug,
   Presentation,
   Target,
   type LucideIcon,
@@ -88,6 +89,16 @@ function buildSections(oppBase: string | null): NavSection[] {
           label: "Agency Intelligence",
           href: oppBase ? `${oppBase}/memory#agency` : "/capture/market-intel/search",
         },
+      ],
+    },
+    {
+      id: "integrations",
+      label: "Integrations",
+      icon: Plug,
+      items: [
+        { label: "Connectors", href: "/integrations/connectors" },
+        { label: "Sync History", href: "/integrations/sync-history" },
+        { label: "Connector Health", href: "/integrations/health" },
       ],
     },
     {
