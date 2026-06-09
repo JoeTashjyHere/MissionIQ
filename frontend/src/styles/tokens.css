@@ -1,0 +1,34 @@
+:root {
+  --miq-navy-700: #1B3957;
+  --miq-navy-800: #102A44;
+  --miq-navy-900: #0A1F33;
+  --miq-charcoal-100: #EEF1F4;
+  --miq-charcoal-300: #C3C7CD;
+  --miq-charcoal-500: #6B7079;
+  --miq-charcoal-700: #3A3F45;
+  --miq-charcoal-900: #1A1D21;
+  --miq-white: #FFFFFF;
+  --miq-canvas: #F6F8FB;
+  --miq-steel-300: #A5C0DE;
+  --miq-steel-500: #3F7AB8;
+  --miq-steel-700: #2A5A8C;
+  --miq-teal-100: #E1F1F2;
+  --miq-teal-500: #3FA2A6;
+  --miq-teal-700: #1E6F73;
+  --miq-status-green: #2F7D55;
+  --miq-status-green-bg: #E6F2EB;
+  --miq-status-amber: #B5780C;
+  --miq-status-amber-bg: #FBF1DC;
+  --miq-status-red: #A8302E;
+  --miq-status-red-bg: #F7E3E2;
+
+  --miq-bg-app: var(--miq-canvas);
+  --miq-bg-surface: var(--miq-white);
+  --miq-text-primary: var(--miq-charcoal-900);
+  --miq-text-secondary: var(--miq-charcoal-700);
+  --miq-text-muted: var(--miq-charcoal-500);
+  --miq-border: var(--miq-charcoal-300);
+  --miq-border-subtle: var(--miq-charcoal-100);
+  --miq-focus: var(--miq-steel-300);
+  --miq-link: var(--miq-steel-700);
+}

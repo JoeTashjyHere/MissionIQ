@@ -1,0 +1,44 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# Node / Next.js
+node_modules/
+.next/
+out/
+.npm/
+.pnpm-store/
+.turbo/
+
+# IDE / OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# Env
+.env
+.env.local
+.env.*.local
+!.env.example
+
+# Runtime data (BlobStore local, logs)
+var/
+backend/var/
+*.log
+
+# Docker
+docker-compose.override.yml
+
+# Build artifacts
+dist/
+build/
+*.tsbuildinfo

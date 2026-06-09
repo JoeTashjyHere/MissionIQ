@@ -1,0 +1,100 @@
+REQUEST FOR PROPOSAL
+Solicitation Number: W912DY-26-R-9999
+Title: Mission Operations Support Services
+
+ISSUING AGENCY: Defense Health Agency (DHA)
+ISSUE DATE: 2026-05-15
+RESPONSE DUE DATE: 2026-08-14, 17:00 ET
+
+NAICS: 541512 — Computer Systems Design Services
+SET-ASIDE: 8(a) Sole Source Eligible
+ESTIMATED VALUE: $48,500,000 (Total Ceiling, 5 Year Period of Performance)
+INCUMBENT: Acme Federal Services LLC (Contract #W912DY-21-D-0001)
+
+SECTION L — INSTRUCTIONS TO OFFERORS
+─────────────────────────────────────
+L.1 General. This solicitation is a competitive 8(a) procurement issued under
+FAR Part 15. Proposals shall be submitted electronically via PIEE no later
+than the response due date.
+
+L.2 Proposal Volumes.
+  Volume I  — Technical Approach (page limit: 40 pages)
+  Volume II — Management Approach (page limit: 25 pages)
+  Volume III — Past Performance (page limit: 20 pages)
+  Volume IV — Price (no page limit)
+
+L.3 Volume I — Technical Approach
+L.3.1 The Contractor shall describe its approach to providing 24x7 operational
+support of the DHA mission operations center, including incident response,
+performance monitoring, and continuity of operations.
+L.3.2 The Contractor shall describe its proposed transition-in plan, including
+knowledge transfer from the incumbent, within 60 days of award.
+L.3.3 The Contractor shall describe its information assurance approach,
+including FedRAMP Moderate alignment and DoD IL5 controls where applicable.
+
+L.4 Volume II — Management Approach
+L.4.1 The Contractor shall identify a Program Manager with a minimum of
+ten (10) years of experience supporting DoD health programs.
+L.4.2 The Contractor shall describe its staffing plan to fill all key
+positions within thirty (30) days of award.
+
+L.5 Volume III — Past Performance
+L.5.1 The Contractor shall submit a maximum of three (3) past performance
+references for contracts of similar size, scope, and complexity performed
+within the last five (5) years.
+
+SECTION M — EVALUATION FACTORS
+──────────────────────────────
+M.1 Best Value Trade-Off Evaluation. The Government will award one IDIQ
+contract resulting from this solicitation to the responsible Offeror whose
+proposal represents the best value to the Government.
+
+M.2 Evaluation Factors (in descending order of importance):
+  Factor 1 — Technical Approach
+  Factor 2 — Management Approach
+  Factor 3 — Past Performance
+  Factor 4 — Price
+
+M.3 Technical Approach (Most Important). The Government will evaluate the
+extent to which the proposed approach meets the requirements of Section C
+(PWS), including 24x7 operations, transition-in, and information assurance.
+
+M.4 Management Approach (Important). The Government will evaluate the
+proposed Program Manager qualifications and the staffing plan.
+
+M.5 Past Performance (Important). The Government will evaluate the relevance
+and quality of submitted past performance references.
+
+M.6 Price (Less Important). The Government will evaluate proposed price for
+realism and reasonableness.
+
+SECTION C — PERFORMANCE WORK STATEMENT (excerpt)
+────────────────────────────────────────────────
+C.1 Mission. The Contractor shall provide mission operations support services
+to the DHA Operations Center to ensure continuity of mission-essential
+functions across all DHA components.
+
+C.2 Scope. Services include but are not limited to:
+  (a) 24x7 monitoring and incident response for operational systems
+  (b) Performance reporting and dashboard maintenance
+  (c) Continuity of operations planning and exercises
+  (d) Transition support for newly onboarded systems
+  (e) Knowledge management and standard operating procedure development
+
+C.3 Period of Performance. One (1) twelve (12) month base period plus four
+(4) twelve (12) month option periods, for a total potential five-year period.
+
+C.4 Deliverables.
+  CDRL A001 — Monthly Status Report (due 10th of each month)
+  CDRL A002 — Quarterly Performance Review (due 30 days after each quarter)
+  CDRL A003 — Transition Plan (due 30 days after award)
+  CDRL A004 — Incident Reports (within 24 hours of qualifying incidents)
+  CDRL A005 — Annual Continuity of Operations Test Report
+
+C.5 Place of Performance. Falls Church, VA, with telework as authorized by
+the Contracting Officer's Representative.
+
+C.6 Security. The Contractor shall comply with all applicable DoD information
+assurance policies, including DoDI 8500.01 and NIST 800-53 Moderate
+baseline. All personnel shall hold a minimum of a Public Trust clearance;
+key positions require Secret.

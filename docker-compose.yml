@@ -1,0 +1,68 @@
+name: missioniq
+
+services:
+  postgres:
+    image: pgvector/pgvector:pg16
+    container_name: missioniq_postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-missioniq}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-missioniq_dev_password}
+      POSTGRES_DB: ${POSTGRES_DB:-missioniq}
+    ports:
+      - "127.0.0.1:5432:5432"
+    volumes:
+      - missioniq_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-missioniq} -d ${POSTGRES_DB:-missioniq}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: missioniq_backend
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      POSTGRES_HOST: postgres
+      MIQ_BLOB_LOCAL_ROOT: /app/var/blobs
+    depends_on:
+      postgres:
+        condition: service_healthy
+    ports:
+      - "127.0.0.1:8000:8000"
+    volumes:
+      - ./backend:/app
+      - missioniq_blobs:/app/var/blobs
+    command: >
+      sh -c "
+        alembic upgrade head &&
+        python -m seeds.seed --if-empty &&
+        uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+      "
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: missioniq_frontend
+    restart: unless-stopped
+    environment:
+      NEXT_PUBLIC_API_BASE_URL: http://localhost:8000/api/v1
+      NODE_ENV: development
+    depends_on:
+      - backend
+    ports:
+      - "127.0.0.1:3000:3000"
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+      - /app/.next
+    command: npm run dev
+
+volumes:
+  missioniq_pgdata:
+  missioniq_blobs:

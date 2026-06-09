@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 240 48" width="240" height="48" fill="none">
+  <g>
+    <path d="M8 12 L20 36 L32 12 L32 36" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" />
+    <text x="44" y="32" font-family="Inter, system-ui, sans-serif" font-size="22" font-weight="700" letter-spacing="-0.3" fill="currentColor">MissionIQ</text>
+  </g>
+</svg>
