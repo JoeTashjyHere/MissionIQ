@@ -1,4 +1,16 @@
-"""Intelligence module + AI output schemas."""
+"""Intelligence module + AI output schemas.
+
+All module outputs share two contracts:
+
+1. Every claim is backed by an ``evidence_ref`` (``E#`` for document chunks,
+   ``M#`` for market intelligence). The platform validates these refs against
+   retrieved evidence at persistence time.
+2. Every downstream module (Compliance Matrix, Evaluation Criteria, Risk
+   Register, …) is fed the latest **Customer DNA Profile** for the
+   opportunity so its output is shaped by the customer's mission, strategic
+   goals, success metrics, and stakeholder concerns — not by generic
+   document extraction.
+"""
 from __future__ import annotations
 
 import uuid
@@ -17,6 +29,7 @@ class ModuleSpec(BaseModel):
     description: str
     version: str
     output_schema_summary: dict[str, str]
+    requires_customer_dna: bool = False
 
 
 class RunModuleRequest(BaseModel):
@@ -51,34 +64,25 @@ class AIOutputResponse(ORMModel):
     generated_at: datetime
 
 
-# ── Module-specific output schemas ──
+# ── Shared primitives ──
 
 
 class SupportingEvidenceItem(BaseModel):
     """Single piece of supporting evidence as cited by the model.
 
-    `evidence_ref` is the canonical pointer (e.g. ``E1`` or ``M2``) into the
-    EVIDENCE block of the prompt. The platform validates these refs against
-    the actual retrieved evidence at persistence time.
+    ``evidence_ref`` is the canonical pointer (e.g. ``E1`` or ``M2``) into the
+    EVIDENCE block of the prompt.
     """
 
     evidence_ref: str
     finding: str
 
 
+# ── Opportunity Summary ──
+
+
 class OpportunitySummaryOutput(BaseModel):
-    """Canonical four-section executive briefing.
-
-    The platform contract for every briefing-style module is:
-
-    - ``executive_summary`` — the bottom line a busy executive needs in 30s
-    - ``key_findings``      — discrete, evidence-backed findings
-    - ``supporting_evidence`` — explicit pointers back to source evidence
-    - ``recommended_actions`` — what the team should do next
-
-    Rich fields (mission_need, scope_summary, deliverables, etc.) remain as
-    structured supplemental data the UI can surface as expanded detail.
-    """
+    """Canonical four-section executive briefing."""
 
     executive_summary: str
     key_findings: list[str]
@@ -93,4 +97,136 @@ class OpportunitySummaryOutput(BaseModel):
     risks: list[str] = []
     pursue_indicators: list[str] = []
     no_pursue_indicators: list[str] = []
+    citations: list[dict] = []
+
+
+# ── Customer DNA Profile ──
+# The platform's central synthesis. Every downstream module reads this so
+# their outputs are shaped by the customer, not by generic document extraction.
+
+
+class CustomerDnaProfile(BaseModel):
+    """Synthesis of who this customer is, what they care about, and how they
+    measure success. Generated from documents + agency mission + agency
+    strategic priorities + operating environment + evaluation criteria +
+    contract context + market intelligence + customer profile.
+
+    All downstream modules consume this profile. Its presence is the
+    difference between extraction-grade output and consultant-grade output.
+    """
+
+    mission: str
+    strategic_goals: list[str]
+    core_values: list[str]
+    success_metrics: list[str]
+    operational_challenges: list[str]
+    technology_priorities: list[str]
+    risk_priorities: list[str]
+    stakeholder_concerns: list[str]
+
+    executive_summary: str
+    key_findings: list[str] = []
+    supporting_evidence: list[SupportingEvidenceItem] = []
+    recommended_actions: list[str] = []
+
+    confidence: Literal["high", "medium", "low", "insufficient"] = "medium"
+    citations: list[dict] = []
+
+
+# ── Compliance Matrix ──
+
+
+class ComplianceRow(BaseModel):
+    requirement_id: str
+    requirement_text: str
+    source_document: str | None = None
+    source_page: int | None = None
+    source_section: str | None = None
+    category: str | None = None
+    response_owner: str | None = None
+    proposed_status: Literal["open", "in_progress", "complete", "n_a"] = "open"
+    notes: str | None = None
+
+    # Insight-grade columns (the differentiators)
+    why_requirement_exists: str
+    mission_alignment: str
+    customer_priority: Literal["critical", "high", "medium", "low"] = "medium"
+
+
+class ComplianceMatrixOutput(BaseModel):
+    executive_summary: str
+    key_findings: list[str]
+    supporting_evidence: list[SupportingEvidenceItem] = []
+    recommended_actions: list[str]
+
+    rows: list[ComplianceRow]
+    coverage_gaps: list[str] = []
+    citations: list[dict] = []
+
+
+# ── Evaluation Criteria ──
+
+
+class EvaluationFactor(BaseModel):
+    factor: str
+    subfactor: str | None = None
+    importance: Literal[
+        "most_important", "important", "less_important", "equal", "unspecified"
+    ] = "unspecified"
+    required_response_elements: list[str] = []
+    source_section: str | None = None
+    source_page: int | None = None
+
+
+class EvaluationCriteriaOutput(BaseModel):
+    executive_summary: str
+    key_findings: list[str]
+    supporting_evidence: list[SupportingEvidenceItem] = []
+    recommended_actions: list[str]
+
+    factors: list[EvaluationFactor]
+
+    # Insight-grade fields (the differentiators)
+    evaluation_intelligence: str
+    likely_decision_drivers: list[str]
+    potential_discriminators: list[str]
+    potential_weaknesses: list[str]
+    strategic_recommendations: list[str]
+
+    citations: list[dict] = []
+
+
+# ── Risk Register ──
+
+
+class RiskItem(BaseModel):
+    title: str
+    description: str
+    mission_impact: str
+    probability: Literal["low", "medium", "high"] = "medium"
+    severity: Literal["low", "medium", "high", "critical"] = "medium"
+    mitigation: str
+    supporting_evidence: list[str] = []
+    owner: str | None = None
+
+
+class RiskRegisterOutput(BaseModel):
+    """Risks lanes are the canonical capture-management taxonomy.
+
+    The four lanes force the model to think across the full pursuit lifecycle
+    (winning, writing, executing, retaining) rather than dumping every risk
+    into one bucket.
+    """
+
+    executive_summary: str
+    key_findings: list[str]
+    supporting_evidence: list[SupportingEvidenceItem] = []
+    recommended_actions: list[str]
+
+    capture_risks: list[RiskItem] = []
+    proposal_risks: list[RiskItem] = []
+    delivery_risks: list[RiskItem] = []
+    customer_risks: list[RiskItem] = []
+
+    top_risks: list[str] = []
     citations: list[dict] = []

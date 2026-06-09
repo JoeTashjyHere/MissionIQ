@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 import { apiRequest, ApiError } from "@/lib/api";
 import type { AIOutput, DocumentRecord } from "@/lib/types";
@@ -10,7 +11,7 @@ import { CitationsRow } from "@/components/ds/Citation";
 import { StatusPill } from "@/components/ds/StatusPill";
 import { Skeleton } from "@/components/ds/Skeleton";
 import { formatDateTime } from "@/lib/format";
-import { AlertTriangle, FileWarning, Wand2 } from "lucide-react";
+import { AlertTriangle, FileWarning, Sparkles, Wand2 } from "lucide-react";
 
 type Renderer = (output: Record<string, unknown>) => React.ReactNode;
 type OutputRenderer = (output: AIOutput) => React.ReactNode;
@@ -159,16 +160,41 @@ export function ModuleWorkbench({
           }
         />
         <CardBody>
-          {latest.status === "insufficient_context" && (
-            <div className="mb-4 rounded-md bg-status-amberBg border border-status-amber/30 text-status-amber text-[13px] px-3 py-2 flex items-start gap-2">
-              <AlertTriangle className="h-4 w-4 mt-0.5 shrink-0" />
-              <div>
-                MissionIQ could not produce a confident briefing from the
-                indexed material. Upload additional documents (RFP, PWS, SOW,
-                Sections L &amp; M) and regenerate.
+          {latest.status === "insufficient_context" &&
+            (latest.output_json as Record<string, unknown>)?.
+              _missing_dependency === "customer_dna" && (
+              <div className="mb-4 rounded-md bg-steel-700/10 border border-steel-700/30 text-steel-700 text-[13px] px-3 py-2 flex items-start gap-2">
+                <Sparkles className="h-4 w-4 mt-0.5 shrink-0" />
+                <div>
+                  <div className="font-semibold text-charcoal-900">
+                    Customer DNA Profile required
+                  </div>
+                  <div className="mt-0.5">
+                    MissionIQ does not generate consultant-grade output without
+                    a Customer DNA Profile.{" "}
+                    <Link
+                      href={`/capture/opportunities/${opportunityId}/customer-dna`}
+                      className="text-steel-700 underline hover:text-charcoal-900"
+                    >
+                      Open the Customer DNA tab
+                    </Link>{" "}
+                    and click Generate, then regenerate this module.
+                  </div>
+                </div>
               </div>
-            </div>
-          )}
+            )}
+          {latest.status === "insufficient_context" &&
+            (latest.output_json as Record<string, unknown>)?.
+              _missing_dependency !== "customer_dna" && (
+              <div className="mb-4 rounded-md bg-status-amberBg border border-status-amber/30 text-status-amber text-[13px] px-3 py-2 flex items-start gap-2">
+                <AlertTriangle className="h-4 w-4 mt-0.5 shrink-0" />
+                <div>
+                  MissionIQ could not produce a confident briefing from the
+                  indexed material. Upload additional documents (RFP, PWS, SOW,
+                  Sections L &amp; M) and regenerate.
+                </div>
+              </div>
+            )}
           {latest.status === "error" && (
             <div className="mb-4 rounded-md bg-status-redBg border border-status-red/30 text-status-red text-[13px] px-3 py-2">
               The model returned an unparsable response. Click Regenerate to

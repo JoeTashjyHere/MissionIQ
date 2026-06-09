@@ -3,13 +3,18 @@
 import { use, useEffect, useState } from "react";
 import Link from "next/link";
 import { apiRequest } from "@/lib/api";
-import type { OpportunityOverview } from "@/lib/types";
+import type {
+  AIOutput,
+  CustomerDnaProfile,
+  OpportunityOverview,
+} from "@/lib/types";
 import { PageHeader } from "@/components/PageHeader";
 import { KpiCard } from "@/components/ds/KpiCard";
 import { Card, CardBody, CardHeader } from "@/components/ds/Card";
 import { StatusPill } from "@/components/ds/StatusPill";
 import { Button } from "@/components/ds/Button";
 import { Skeleton } from "@/components/ds/Skeleton";
+import { Sparkles } from "lucide-react";
 import {
   captureStageLabel,
   daysUntil,
@@ -25,11 +30,17 @@ export default function OpportunityBriefingPage({
 }) {
   const { opportunityId } = use(params);
   const [overview, setOverview] = useState<OpportunityOverview | null>(null);
+  const [dna, setDna] = useState<AIOutput | null | undefined>(undefined);
 
   useEffect(() => {
     apiRequest<OpportunityOverview>(`/opportunities/${opportunityId}/overview`)
       .then(setOverview)
       .catch(() => setOverview(null));
+    apiRequest<AIOutput | null>(
+      `/opportunities/${opportunityId}/modules/capture.customer_dna/latest`,
+    )
+      .then((r) => setDna(r ?? null))
+      .catch(() => setDna(null));
   }, [opportunityId]);
 
   if (!overview) {
@@ -93,6 +104,8 @@ export default function OpportunityBriefingPage({
           helper={`${overview.risk_count} total`}
         />
       </div>
+
+      <DnaSnapshotCard opportunityId={opportunityId} dna={dna} />
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <Card className="lg:col-span-2">
@@ -186,6 +199,125 @@ function Field({
       >
         {value}
       </dd>
+    </div>
+  );
+}
+
+function DnaSnapshotCard({
+  opportunityId,
+  dna,
+}: {
+  opportunityId: string;
+  dna: AIOutput | null | undefined;
+}) {
+  const href = `/capture/opportunities/${opportunityId}/customer-dna`;
+
+  if (dna === undefined) {
+    return (
+      <div className="mb-6">
+        <Skeleton className="h-28" />
+      </div>
+    );
+  }
+
+  if (dna === null || dna.status !== "ok") {
+    return (
+      <Card className="mb-6 border-steel-700/30">
+        <CardBody>
+          <div className="flex items-start gap-4">
+            <div className="rounded-md bg-steel-700/10 text-steel-700 p-2">
+              <Sparkles className="h-5 w-5" />
+            </div>
+            <div className="flex-1">
+              <div className="miq-eyebrow">Synthesis · Required first</div>
+              <h3 className="text-h3 text-charcoal-900 mt-1">
+                Generate the Customer DNA Profile
+              </h3>
+              <p className="text-[13.5px] text-charcoal-700 mt-1 max-w-2xl">
+                Before MissionIQ produces consultant-grade Compliance,
+                Evaluation, or Risk output, it synthesizes a portrait of the
+                customer: mission, strategic goals, success metrics,
+                operational challenges, technology priorities, risk
+                priorities, and stakeholder concerns. Every downstream module
+                consumes this profile so its output is shaped by the customer
+                — not by generic AI extraction.
+              </p>
+            </div>
+            <Link href={href}>
+              <Button>Open Customer DNA</Button>
+            </Link>
+          </div>
+        </CardBody>
+      </Card>
+    );
+  }
+
+  const o = dna.output_json as unknown as CustomerDnaProfile;
+  return (
+    <Card className="mb-6">
+      <CardHeader
+        eyebrow="Customer DNA Profile · Synthesis"
+        title="Who this customer is"
+        actions={
+          <Link href={href}>
+            <Button size="sm" variant="secondary">
+              Open full profile
+            </Button>
+          </Link>
+        }
+      />
+      <CardBody>
+        <p className="text-[14.5px] text-charcoal-900 leading-relaxed">
+          {o.mission || "—"}
+        </p>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">
+          <DnaColumn label="Strategic goals" items={o.strategic_goals} />
+          <DnaColumn label="Success metrics" items={o.success_metrics} />
+          <DnaColumn
+            label="Stakeholder concerns"
+            items={o.stakeholder_concerns}
+          />
+        </div>
+        {o.confidence && (
+          <div className="mt-4">
+            <StatusPill
+              tone={
+                o.confidence === "high"
+                  ? "green"
+                  : o.confidence === "medium"
+                    ? "amber"
+                    : "red"
+              }
+            >
+              Confidence: {o.confidence}
+            </StatusPill>
+          </div>
+        )}
+      </CardBody>
+    </Card>
+  );
+}
+
+function DnaColumn({
+  label,
+  items,
+}: {
+  label: string;
+  items?: string[];
+}) {
+  const top = (items ?? []).slice(0, 3);
+  return (
+    <div>
+      <div className="miq-eyebrow mb-1">{label}</div>
+      {top.length === 0 ? (
+        <p className="text-charcoal-500 italic text-[12.5px]">—</p>
+      ) : (
+        <ul className="space-y-1 text-[13px] text-charcoal-900 list-disc pl-4">
+          {top.map((x, i) => (
+            <li key={i}>{x}</li>
+          ))}
+        </ul>
+      )}
     </div>
   );
 }

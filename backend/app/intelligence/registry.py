@@ -27,10 +27,39 @@ class ModuleRegistry:
 
 @lru_cache
 def get_registry() -> ModuleRegistry:
+    """Register every intelligence module.
+
+    Order matters for the UI: the Customer DNA Profile is registered first
+    because every downstream Capture module consumes it. The order also
+    determines the order of the ``/modules`` API response, which the
+    frontend uses to render the opportunity sub-navigation.
+    """
     registry = ModuleRegistry()
+
+    # The synthesis step (read by everything else)
+    from app.intelligence.modules.capture.customer_dna import (  # noqa: E402
+        CustomerDnaModule,
+    )
+
+    # Briefing-style modules
     from app.intelligence.modules.capture.opportunity_summary import (  # noqa: E402
         OpportunitySummaryModule,
     )
 
+    # Insight-grade modules (require Customer DNA)
+    from app.intelligence.modules.capture.compliance_matrix import (  # noqa: E402
+        ComplianceMatrixModule,
+    )
+    from app.intelligence.modules.capture.evaluation_criteria import (  # noqa: E402
+        EvaluationCriteriaModule,
+    )
+    from app.intelligence.modules.capture.risk_register import (  # noqa: E402
+        RiskRegisterModule,
+    )
+
+    registry.register(CustomerDnaModule)
     registry.register(OpportunitySummaryModule)
+    registry.register(ComplianceMatrixModule)
+    registry.register(EvaluationCriteriaModule)
+    registry.register(RiskRegisterModule)
     return registry

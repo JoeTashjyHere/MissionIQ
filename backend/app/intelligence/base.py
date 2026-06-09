@@ -1,8 +1,23 @@
 """Base class for all intelligence modules.
 
 Each module declares its id, group, prompt id+version, output schema, retrieval
-query, and result post-processing. The platform's `run_module` orchestrator
-calls a uniform `run()` interface, so adding a new module is purely declarative.
+query, and result post-processing. The platform's ``run_module`` orchestrator
+calls a uniform ``run()`` interface, so adding a new module is purely
+declarative.
+
+Customer DNA dependency
+-----------------------
+
+A module that consumes the Customer DNA Profile sets
+``requires_customer_dna = True``. The orchestrator then loads the latest
+DNA Profile for the opportunity from ``ai_output`` and passes it to the
+prompt template as the ``customer_dna`` Jinja variable.
+
+If ``requires_customer_dna`` is True and no DNA Profile exists yet for the
+opportunity, the module short-circuits with ``status = "insufficient_context"``
+and a clear ``recommended_actions`` payload pointing the user to the DNA
+synthesis step. This is the platform's anti-generic-AI guarantee: downstream
+modules cannot run without the customer synthesis upstream of them.
 """
 from __future__ import annotations
 
@@ -12,13 +27,17 @@ from dataclasses import dataclass, field
 from typing import Any, ClassVar
 
 from pydantic import BaseModel
+from sqlalchemy import desc, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.intelligence.rag import Evidence, RAGEngine
 from app.llm.base import LLMResponse
 from app.llm.prompt_library import PromptLibrary
 from app.llm.router import LLMRouter
-from app.models import Opportunity
+from app.models import AIOutput, Opportunity
+
+
+CUSTOMER_DNA_MODULE_ID = "capture.customer_dna"
 
 
 @dataclass(slots=True)
@@ -39,6 +58,35 @@ class ModuleResult:
     structured_writes: list[Any] = field(default_factory=list)
 
 
+class _NoopLLMResponse:
+    """Synthetic LLMResponse for short-circuit refusals (no LLM call made)."""
+
+    provider = "missioniq"
+    model = "no-call"
+    input_tokens = 0
+    output_tokens = 0
+    latency_ms = 0
+    text = ""
+
+
+def _short_circuit_dna_missing() -> dict[str, Any]:
+    return {
+        "executive_summary": (
+            "MissionIQ requires a Customer DNA Profile before producing "
+            "consultant-grade output for this module. Generate the Customer "
+            "DNA Profile first, then re-run."
+        ),
+        "key_findings": [],
+        "supporting_evidence": [],
+        "recommended_actions": [
+            "Open the Customer DNA Profile tab and click Generate.",
+            "Once the DNA Profile is generated, regenerate this module to "
+            "produce mission-aligned analysis.",
+        ],
+        "_missing_dependency": "customer_dna",
+    }
+
+
 class BaseIntelligenceModule:
     id: ClassVar[str]
     group: ClassVar[str]
@@ -52,6 +100,11 @@ class BaseIntelligenceModule:
     retrieval_query: ClassVar[str] = ""
     retrieval_top_k: ClassVar[int] = 12
     minimum_evidence: ClassVar[int] = 2
+    # If True, the orchestrator loads the most recent Customer DNA Profile
+    # for the opportunity and passes it to the prompt as ``customer_dna``.
+    # If no DNA Profile exists yet, the module short-circuits with
+    # ``status = "insufficient_context"`` and a clear remediation message.
+    requires_customer_dna: ClassVar[bool] = False
 
     def __init__(
         self,
@@ -66,6 +119,22 @@ class BaseIntelligenceModule:
         self.llm_router = llm_router
         self.prompts = prompts
 
+    async def _load_customer_dna(
+        self, *, workspace_id: uuid.UUID, opportunity_id: uuid.UUID
+    ) -> dict[str, Any] | None:
+        """Return the most recent successful Customer DNA Profile payload, or None."""
+        stmt = (
+            select(AIOutput)
+            .where(AIOutput.workspace_id == workspace_id)
+            .where(AIOutput.opportunity_id == opportunity_id)
+            .where(AIOutput.module_id == CUSTOMER_DNA_MODULE_ID)
+            .where(AIOutput.status == "ok")
+            .order_by(desc(AIOutput.created_at))
+            .limit(1)
+        )
+        row = (await self.db.execute(stmt)).scalar_one_or_none()
+        return row.output_json if row else None
+
     async def run(
         self,
         *,
@@ -73,6 +142,30 @@ class BaseIntelligenceModule:
         ctx: RAGContext,
         model_override: str | None = None,
     ) -> ModuleResult:
+        # 1. Customer DNA prerequisite check (for downstream modules)
+        customer_dna: dict[str, Any] | None = None
+        if self.requires_customer_dna:
+            customer_dna = await self._load_customer_dna(
+                workspace_id=ctx.workspace_id,
+                opportunity_id=ctx.opportunity_id,
+            )
+            if customer_dna is None:
+                return ModuleResult(
+                    output=_short_circuit_dna_missing(),
+                    evidence=[],
+                    market_evidence=[],
+                    llm=LLMResponse(
+                        text="",
+                        provider="missioniq",
+                        model="no-call",
+                        input_tokens=0,
+                        output_tokens=0,
+                        latency_ms=0,
+                    ),
+                    status="insufficient_context",
+                )
+
+        # 2. Retrieve grounded evidence
         evidence = await self.rag.retrieve(
             query=self.retrieval_query or self.description,
             workspace_id=ctx.workspace_id,
@@ -92,6 +185,7 @@ class BaseIntelligenceModule:
         if len(evidence) < self.minimum_evidence:
             status = "insufficient_context"
 
+        # 3. Render prompt with opportunity + evidence + (optional) DNA
         prompts = self.prompts
         system, user, _ = prompts.render(
             self.prompt_id,
@@ -99,7 +193,10 @@ class BaseIntelligenceModule:
             opportunity=_safe_opp(opportunity),
             evidence=evidence,
             market_evidence=market_evidence,
+            customer_dna=customer_dna,
         )
+
+        # 4. LLM call
         llm = self.llm_router.chat_provider(model_override)
         llm_resp = await llm.generate_json(system=system, user=user)
         try:
@@ -128,10 +225,13 @@ def _safe_opp(opp: Opportunity) -> dict[str, Any]:
     return {
         "name": opp.name,
         "agency": opp.agency,
+        "sub_agency": opp.sub_agency,
         "solicitation_number": opp.solicitation_number,
         "naics_code": opp.naics_code,
         "due_date": opp.due_date.isoformat() if opp.due_date else None,
         "estimated_value_cents": opp.estimated_value_cents,
         "incumbent": opp.incumbent,
         "notes": opp.notes,
+        "capture_stage": opp.capture_stage,
+        "contract_vehicle": opp.contract_vehicle,
     }

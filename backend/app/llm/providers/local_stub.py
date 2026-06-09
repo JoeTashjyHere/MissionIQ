@@ -63,15 +63,52 @@ class LocalStubLLM:
 def _build_skeleton(user_prompt: str) -> dict:
     """Heuristic placeholder skeleton tailored to the prompt id mentioned in the prompt body.
 
-    For the Opportunity Summary prompt, we look for the EVIDENCE block and
-    surface the actual document name, page numbers, and snippets so the demo
-    feels grounded even without a real LLM. Citations are emitted in the exact
-    ``E{n}`` format the prompt advertises.
+    For each known module prompt, we surface the actual evidence (document
+    name, page, snippet) plus the Customer DNA attributes when present so
+    the demo feels grounded even without a real LLM. Citations are emitted
+    in the exact ``E{n}`` / ``M{n}`` format the prompts advertise.
+
+    Routing priority matters: more-specific module markers must be checked
+    BEFORE less-specific ones, because every prompt body happens to contain
+    the literal string "executive_summary" inside its JSON schema block.
     """
     lower = user_prompt.lower()
     evidence_refs = _parse_evidence_refs(user_prompt)
     has_evidence = bool(evidence_refs)
+    dna = _parse_customer_dna(user_prompt)
 
+    # ── Module-specific routes ───────────────────────────────────────────
+    # Each downstream module prompt advertises unique schema field names.
+    # Order matters only for disambiguation between the DNA producer prompt
+    # and a generic "executive_summary" fallback.
+
+    if "why_requirement_exists" in lower and "customer_priority" in lower:
+        return _compliance_matrix_skeleton(evidence_refs, dna)
+
+    if (
+        "evaluation_intelligence" in lower
+        and "likely_decision_drivers" in lower
+        and "potential_discriminators" in lower
+    ):
+        return _evaluation_criteria_skeleton(evidence_refs, dna)
+
+    if (
+        "capture_risks" in lower
+        and "proposal_risks" in lower
+        and "delivery_risks" in lower
+        and "customer_risks" in lower
+    ):
+        return _risk_register_skeleton(evidence_refs, dna)
+
+    if (
+        "strategic_goals" in lower
+        and "stakeholder_concerns" in lower
+        and "core_values" in lower
+        and "operational_challenges" in lower
+    ):
+        return _customer_dna_skeleton(evidence_refs)
+
+    # ── Opportunity Summary (legacy fallback) ────────────────────────────
     if (
         "opportunity_summary" in lower
         or "opportunity summary" in lower
@@ -214,6 +251,498 @@ def _parse_evidence_refs(user_prompt: str) -> list[dict]:
 
 def _hash(s: str) -> str:
     return hashlib.sha256(s.encode("utf-8")).hexdigest()[:16]
+
+
+def _parse_customer_dna(user_prompt: str) -> dict | None:
+    """Pull the rendered Customer DNA Profile block out of a downstream prompt.
+
+    Returns None if the block isn't present (e.g. the DNA Module itself, or
+    a prompt that doesn't consume DNA).
+    """
+    import re
+
+    if "CUSTOMER DNA PROFILE" not in user_prompt:
+        return None
+    dna: dict[str, object] = {}
+    block_match = re.search(
+        r"CUSTOMER DNA PROFILE\s*\n[─-]+\n(.*?)\n\n",
+        user_prompt,
+        re.DOTALL,
+    )
+    if not block_match:
+        return None
+    block = block_match.group(1)
+    for raw_line in block.splitlines():
+        line = raw_line.strip()
+        if ":" not in line:
+            continue
+        key, _, value = line.partition(":")
+        key_norm = key.strip().lower().rstrip(":").replace(" ", "_").replace("-", "_")
+        value = value.strip()
+        if key_norm == "mission":
+            dna["mission"] = value
+        elif key_norm in {"strategic_goals", "core_values", "success_metrics",
+                          "operational_challenges", "technology_priorities",
+                          "risk_priorities", "stakeholder_concerns"}:
+            dna[key_norm] = [s.strip() for s in value.split(";") if s.strip()]
+    return dna or None
+
+
+# ── Module-specific skeleton builders ──────────────────────────────────────
+
+
+def _customer_dna_skeleton(evidence_refs: list[dict]) -> dict:
+    if not evidence_refs:
+        return {
+            "mission": "Insufficient context to synthesize a Customer DNA Profile.",
+            "strategic_goals": [],
+            "core_values": [],
+            "success_metrics": [],
+            "operational_challenges": [],
+            "technology_priorities": [],
+            "risk_priorities": [],
+            "stakeholder_concerns": [],
+            "executive_summary": (
+                "MissionIQ requires source material before it will synthesize "
+                "a customer portrait. Upload the RFP, the agency's strategic "
+                "plan, and any sub-organization charter or mission statement."
+            ),
+            "key_findings": [],
+            "supporting_evidence": [],
+            "recommended_actions": [
+                "Upload the RFP, PWS, and Sections L & M.",
+                "Upload the agency strategic plan (e.g. the 5-year plan, IT roadmap).",
+                "Add a sub-organization fact sheet if one is available.",
+                "Link relevant SAM.gov notices to enrich market context.",
+            ],
+            "confidence": "insufficient",
+            "citations": [],
+        }
+    first = evidence_refs[0]
+    return {
+        "mission": (
+            f"[Stub DNA] The customer's mission is inferred from "
+            f"{first['document_name']} (page {first['page'] or '?'}). "
+            "Configure a real LLM for a defensible synthesis."
+        ),
+        "strategic_goals": [
+            "[Stub] Goal 1: modernize mission operations.",
+            "[Stub] Goal 2: strengthen continuity of operations.",
+            "[Stub] Goal 3: accelerate FedRAMP-aligned cloud adoption.",
+        ],
+        "core_values": [
+            "[Stub] Mission readiness over speed-to-decision.",
+            "[Stub] Auditability and traceability.",
+            "[Stub] Workforce stewardship.",
+        ],
+        "success_metrics": [
+            "[Stub] 24x7 uptime of mission systems.",
+            "[Stub] Reduction in incident MTTR.",
+            "[Stub] Cycle time on continuity-of-operations exercises.",
+        ],
+        "operational_challenges": [
+            "[Stub] Aging mission systems and tech debt.",
+            "[Stub] Limited internal cyber engineering capacity.",
+            "[Stub] Coordination across multiple sub-components.",
+        ],
+        "technology_priorities": [
+            "[Stub] FedRAMP Moderate / IL5 alignment.",
+            "[Stub] Zero-trust architecture.",
+            "[Stub] Observability + performance dashboards.",
+        ],
+        "risk_priorities": [
+            "[Stub] Mission disruption during transition.",
+            "[Stub] Audit findings (OIG / GAO).",
+            "[Stub] Cyber incidents during election or budget cycles.",
+        ],
+        "stakeholder_concerns": [
+            "[Stub] Contracting Officer: schedule certainty.",
+            "[Stub] Program Manager: incumbent transition risk.",
+            "[Stub] Mission Owner: continuity of operations.",
+            "[Stub] CIO: cyber posture and FedRAMP timeline.",
+        ],
+        "executive_summary": (
+            f"[Stub] Synthesized from {len(evidence_refs)} evidence chunk(s) "
+            f"including {first['document_name']}. Real provider produces a "
+            "defensible portrait grounded in the cited material."
+        ),
+        "key_findings": [
+            f"Evidence {ref['ref']}: {ref['snippet'][:140]}…"
+            for ref in evidence_refs[:4]
+        ],
+        "supporting_evidence": [
+            {
+                "evidence_ref": ref["ref"],
+                "finding": f"{ref['document_name']} p.{ref['page'] or '?'}",
+            }
+            for ref in evidence_refs[:4]
+        ],
+        "recommended_actions": [
+            "Validate inferred attributes with a customer-facing interview.",
+            "Add the agency strategic plan to ground strategic_goals.",
+            "Link the most recent OIG/GAO report to harden risk_priorities.",
+        ],
+        "confidence": "medium",
+        "citations": [
+            {
+                "evidence_ref": ref["ref"],
+                "claim": f"Supports DNA inference from {ref['document_name']}.",
+            }
+            for ref in evidence_refs[:4]
+        ],
+    }
+
+
+def _compliance_matrix_skeleton(
+    evidence_refs: list[dict], dna: dict | None
+) -> dict:
+    if not evidence_refs:
+        return _empty_briefing(
+            "Insufficient context to build a Compliance Matrix.",
+            "Upload Sections L and M, the PWS, and the SOW.",
+        ) | {"rows": [], "coverage_gaps": ["Section L instructions",
+                                            "Section M evaluation factors"]}
+
+    goal_anchor = (dna or {}).get("strategic_goals", [""])
+    goal_anchor = goal_anchor[0] if goal_anchor else "the customer's mission"
+
+    rows = []
+    for i, ref in enumerate(evidence_refs[:6], start=1):
+        priority = ["critical", "high", "high", "medium", "medium", "low"][i - 1]
+        rows.append(
+            {
+                "requirement_id": f"L.{i}",
+                "requirement_text": ref["snippet"][:180] or "[Stub requirement text]",
+                "source_document": ref["document_name"],
+                "source_page": int(ref["page"]) if ref["page"] else None,
+                "source_section": None,
+                "category": ["Technical", "Management", "Past Performance",
+                             "Pricing", "Security", "Transition"][i - 1],
+                "response_owner": "Capture Lead",
+                "proposed_status": "open",
+                "notes": "[Stub] Real model produces capture-team commentary here.",
+                "why_requirement_exists": (
+                    f"[Stub] The customer needs this because it ladders into "
+                    f"their mission outcomes (see DNA: {goal_anchor})."
+                ),
+                "mission_alignment": (
+                    f"[Stub] Aligns with the customer's strategic goal: "
+                    f"{goal_anchor}."
+                ),
+                "customer_priority": priority,
+            }
+        )
+    return {
+        "executive_summary": (
+            f"[Stub] Compliance Matrix derived from {len(evidence_refs)} "
+            "evidence chunk(s), weighted by the Customer DNA Profile. "
+            "Real LLM output produces 12–40 substantive rows."
+        ),
+        "key_findings": [
+            "[Stub] Heaviest weighting falls on Technical and Management volumes.",
+            "[Stub] Security/transition requirements ladder into the customer's risk priorities.",
+        ],
+        "supporting_evidence": [
+            {
+                "evidence_ref": ref["ref"],
+                "finding": f"Requirement sourced from {ref['document_name']}.",
+            }
+            for ref in evidence_refs[:4]
+        ],
+        "recommended_actions": [
+            "Confirm Section M weights with the Capture Lead.",
+            "Engage a Security SME on transition-period IA controls.",
+            "Pull past performance citations matching the top categories.",
+        ],
+        "rows": rows,
+        "coverage_gaps": [
+            "[Stub] CDRL list (verify completeness vs Section J).",
+            "[Stub] Section L formatting constraints (page limits per volume).",
+        ],
+        "citations": [
+            {
+                "evidence_ref": ref["ref"],
+                "claim": f"Source for row sourced from {ref['document_name']}.",
+            }
+            for ref in evidence_refs[:4]
+        ],
+    }
+
+
+def _evaluation_criteria_skeleton(
+    evidence_refs: list[dict], dna: dict | None
+) -> dict:
+    if not evidence_refs:
+        return _empty_briefing(
+            "Insufficient context to produce Evaluation Criteria intelligence.",
+            "Upload Section M, Section L, and any DD-254/IA addenda.",
+        ) | {
+            "factors": [],
+            "evaluation_intelligence": (
+                "Cannot produce evaluation intelligence without Section M. "
+                "Upload it on the Documents tab and regenerate."
+            ),
+            "likely_decision_drivers": [],
+            "potential_discriminators": [],
+            "potential_weaknesses": [],
+            "strategic_recommendations": [],
+        }
+
+    dna_goal = (dna or {}).get("strategic_goals", [""])[0] if dna else ""
+    return {
+        "executive_summary": (
+            "[Stub] Best-value trade-off with Technical and Past Performance "
+            "weighted above Price. Decision board is likely to reward "
+            "credible continuity-of-operations and transition discipline."
+        ),
+        "key_findings": [
+            "[Stub] Technical Approach is most important per Section M.",
+            "[Stub] Past Performance signals weight more than Price.",
+            "[Stub] Transition discipline is a likely tiebreaker.",
+        ],
+        "supporting_evidence": [
+            {
+                "evidence_ref": ref["ref"],
+                "finding": f"Section M / L evidence in {ref['document_name']}.",
+            }
+            for ref in evidence_refs[:4]
+        ],
+        "recommended_actions": [
+            "Schedule a color-team review on Technical Volume narrative arc.",
+            "Validate past performance citations against agency relevance.",
+            "Pressure-test transition plan with delivery leadership.",
+        ],
+        "factors": [
+            {
+                "factor": "Technical Approach",
+                "subfactor": None,
+                "importance": "most_important",
+                "required_response_elements": [
+                    "24x7 ops approach",
+                    "transition-in plan",
+                    "information assurance approach",
+                ],
+                "source_section": "Section M.3",
+                "source_page": evidence_refs[0]["page"] and int(evidence_refs[0]["page"]),
+            },
+            {
+                "factor": "Management Approach",
+                "subfactor": None,
+                "importance": "important",
+                "required_response_elements": [
+                    "Program Manager qualifications",
+                    "staffing plan",
+                ],
+                "source_section": "Section M.4",
+                "source_page": None,
+            },
+            {
+                "factor": "Past Performance",
+                "subfactor": None,
+                "importance": "important",
+                "required_response_elements": ["3 references, similar size/scope"],
+                "source_section": "Section M.5",
+                "source_page": None,
+            },
+            {
+                "factor": "Price",
+                "subfactor": None,
+                "importance": "less_important",
+                "required_response_elements": ["realism", "reasonableness"],
+                "source_section": "Section M.6",
+                "source_page": None,
+            },
+        ],
+        "evaluation_intelligence": (
+            "[Stub] This is a best-value trade-off, not LPTA. The evaluation "
+            "board will reward narrative coherence between technical approach, "
+            "transition discipline, and past performance. Price discipline "
+            "matters but rarely wins. Tie-breakers are likely to be "
+            "transition risk and PM credibility."
+            + (f" Aligns with customer DNA: {dna_goal}." if dna_goal else "")
+        ),
+        "likely_decision_drivers": [
+            "[Stub] Credible 24x7 ops approach with named PM.",
+            "[Stub] Transition discipline that minimizes mission risk.",
+            "[Stub] Past performance directly comparable to DHA scope.",
+        ],
+        "potential_discriminators": [
+            "[Stub] FedRAMP Moderate / IL5 lineage.",
+            "[Stub] Embedded analytics / observability practice.",
+            "[Stub] 8(a) status with credible scale.",
+        ],
+        "potential_weaknesses": [
+            "[Stub] Thin DHA-specific past performance.",
+            "[Stub] PM bench depth (single-deep risk).",
+            "[Stub] Surge staffing posture during transition.",
+        ],
+        "strategic_recommendations": [
+            "[Stub] Lead Technical narrative with a transition-risk story.",
+            "[Stub] Ghost the incumbent on continuity-of-operations gaps.",
+            "[Stub] Close past performance gap with a teaming partner.",
+            "[Stub] Surface CIO and Mission Owner concerns in win themes.",
+        ],
+        "citations": [
+            {"evidence_ref": ref["ref"], "claim": "Supports evaluation analysis."}
+            for ref in evidence_refs[:4]
+        ],
+    }
+
+
+def _risk_register_skeleton(
+    evidence_refs: list[dict], dna: dict | None
+) -> dict:
+    if not evidence_refs:
+        return _empty_briefing(
+            "Insufficient context to produce a defensible Risk Register.",
+            "Upload the RFP, PWS, Section M, and any past-performance documents.",
+        ) | {
+            "capture_risks": [],
+            "proposal_risks": [],
+            "delivery_risks": [],
+            "customer_risks": [],
+            "top_risks": [],
+        }
+
+    def _risk(
+        title: str,
+        description: str,
+        mission_impact: str,
+        probability: str,
+        severity: str,
+        mitigation: str,
+        owner: str | None,
+        refs: list[str],
+    ) -> dict:
+        return {
+            "title": title,
+            "description": description,
+            "mission_impact": mission_impact,
+            "probability": probability,
+            "severity": severity,
+            "mitigation": mitigation,
+            "supporting_evidence": refs,
+            "owner": owner,
+        }
+
+    e_refs = [r["ref"] for r in evidence_refs[:4]] or ["E1"]
+    mission_anchor = (dna or {}).get("mission", "mission outcomes") if dna else "mission outcomes"
+
+    capture_risks = [
+        _risk(
+            "[Stub] Incumbent relationship advantage",
+            "Incumbent has multi-year mission knowledge and a sitting PM with weekly customer touchpoints.",
+            f"Incumbency could lock in evaluator preference and slow our access to: {mission_anchor}.",
+            "high",
+            "high",
+            "Schedule a Capture-led discovery sweep; identify two customer champions outside the incumbent's daily orbit.",
+            "Capture Lead",
+            e_refs[:1],
+        ),
+        _risk(
+            "[Stub] Past performance gap in DHA portfolio",
+            "Limited prior DHA-specific past performance vs the typical competitive set.",
+            "Weakens Past Performance evaluation factor; raises perceived transition risk.",
+            "medium",
+            "high",
+            "Identify and qualify a sub-prime with deep DHA past performance; secure CPARS letters.",
+            "Capture Lead",
+            e_refs[:1],
+        ),
+    ]
+    proposal_risks = [
+        _risk(
+            "[Stub] Page limit on Technical Volume",
+            "40-page Technical Volume limit is tight given the breadth of 24x7 ops, transition, and IA scope.",
+            "Forces hard prioritization; risk of under-developing the differentiating technical narrative.",
+            "high",
+            "medium",
+            "Lock a one-page-per-factor outline at Pink Team; assign a single Volume Lead with cut authority.",
+            "Proposal Manager",
+            e_refs[:1],
+        ),
+    ]
+    delivery_risks = [
+        _risk(
+            "[Stub] 60-day transition window for mission-critical ops",
+            "Knowledge transfer from incumbent must complete in 60 days for a 24x7 mission system.",
+            "Failed transition disrupts continuity-of-operations and triggers customer reputation risk.",
+            "medium",
+            "critical",
+            "Stand up a transition cell with a named TM, IL5-cleared shadow staff, and a 30/60/90 day playbook.",
+            "Delivery Lead",
+            e_refs[:2],
+        ),
+        _risk(
+            "[Stub] FedRAMP Moderate / IL5 control coverage",
+            "Section L.3.3 references FedRAMP Moderate and DoD IL5 controls; control inheritance posture unclear.",
+            "Late discovery of control gaps would delay ATO and slip mission availability.",
+            "medium",
+            "high",
+            "Run an IA gap assessment against NIST 800-53 Moderate during proposal phase; document inheritance.",
+            "Security Lead",
+            e_refs[:1],
+        ),
+    ]
+    customer_risks = [
+        _risk(
+            "[Stub] OIG / oversight visibility on transition",
+            "DHA transitions of mission-critical systems are recurring OIG/GAO audit topics.",
+            "An audit finding during transition would impact customer reputation with HASC/SASC oversight.",
+            "low",
+            "high",
+            "Build an audit-ready transition evidence pack (artifacts, decisions, sign-offs) from week one.",
+            "Customer Success",
+            e_refs[:1],
+        ),
+    ]
+    return {
+        "executive_summary": (
+            "[Stub] Highest material risk is the 60-day transition window for a "
+            "mission-critical 24x7 system. The capture-side advantage of the "
+            "incumbent and the past-performance gap are the next two risks "
+            "that should drive immediate capture moves."
+        ),
+        "key_findings": [
+            "[Stub] One critical risk (transition severity).",
+            "[Stub] Two high-severity capture risks tied to incumbency and past performance.",
+            "[Stub] All risks ladder into the customer's mission and stakeholder concerns.",
+        ],
+        "supporting_evidence": [
+            {
+                "evidence_ref": ref["ref"],
+                "finding": f"Evidence in {ref['document_name']}.",
+            }
+            for ref in evidence_refs[:4]
+        ],
+        "recommended_actions": [
+            "Convene a Capture-side risk review this week.",
+            "Open a teaming dialogue with a candidate sub-prime to close past performance gap.",
+            "Stand up the transition cell in parallel with proposal development.",
+        ],
+        "capture_risks": capture_risks,
+        "proposal_risks": proposal_risks,
+        "delivery_risks": delivery_risks,
+        "customer_risks": customer_risks,
+        "top_risks": [r["title"] for r in delivery_risks + capture_risks[:1]],
+        "citations": [
+            {"evidence_ref": ref["ref"], "claim": "Supports risk identification."}
+            for ref in evidence_refs[:4]
+        ],
+    }
+
+
+def _empty_briefing(executive_summary: str, action: str) -> dict:
+    return {
+        "executive_summary": executive_summary,
+        "key_findings": [],
+        "supporting_evidence": [],
+        "recommended_actions": [
+            action,
+            "Generate the Customer DNA Profile before re-running this module.",
+        ],
+        "citations": [],
+    }
 
 
 class LocalStubEmbedder:

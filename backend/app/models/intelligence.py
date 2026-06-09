@@ -75,11 +75,19 @@ class AIOutput(UUIDPkMixin, TimestampMixin, Base):
     )
 
 
+CUSTOMER_PRIORITIES = ("critical", "high", "medium", "low")
+RISK_LANES = ("capture", "proposal", "delivery", "customer")
+
+
 class ComplianceRequirement(UUIDPkMixin, TimestampMixin, Base):
     __tablename__ = "compliance_requirement"
     __table_args__ = (
         CheckConstraint(
             f"status IN {COMPLIANCE_STATUSES!r}", name="ck_compliance_status"
+        ),
+        CheckConstraint(
+            f"customer_priority IN {CUSTOMER_PRIORITIES!r} OR customer_priority IS NULL",
+            name="ck_compliance_priority",
         ),
     )
 
@@ -100,9 +108,15 @@ class ComplianceRequirement(UUIDPkMixin, TimestampMixin, Base):
     )
     source_page: Mapped[int | None] = mapped_column(Integer)
     source_section: Mapped[str | None] = mapped_column(String(200))
+    category: Mapped[str | None] = mapped_column(String(60))
     owner: Mapped[str | None] = mapped_column(String(200))
     status: Mapped[str] = mapped_column(String(20), nullable=False, default="open")
     notes: Mapped[str | None] = mapped_column(Text)
+
+    # Insight-grade columns (the consultant-grade differentiators)
+    why_requirement_exists: Mapped[str | None] = mapped_column(Text)
+    mission_alignment: Mapped[str | None] = mapped_column(Text)
+    customer_priority: Mapped[str | None] = mapped_column(String(20))
 
 
 class EvaluationCriterion(UUIDPkMixin, TimestampMixin, Base):
@@ -133,6 +147,13 @@ class EvaluationCriterion(UUIDPkMixin, TimestampMixin, Base):
     source_page: Mapped[int | None] = mapped_column(Integer)
     source_section: Mapped[str | None] = mapped_column(String(200))
 
+    # Insight-grade columns: capture-leadership-level evaluation intelligence
+    evaluation_intelligence: Mapped[str | None] = mapped_column(Text)
+    likely_decision_drivers: Mapped[list[str] | None] = mapped_column(ARRAY(String))
+    potential_discriminators: Mapped[list[str] | None] = mapped_column(ARRAY(String))
+    potential_weaknesses: Mapped[list[str] | None] = mapped_column(ARRAY(String))
+    strategic_recommendations: Mapped[list[str] | None] = mapped_column(ARRAY(String))
+
 
 class Risk(UUIDPkMixin, TimestampMixin, Base):
     __tablename__ = "risk"
@@ -143,6 +164,17 @@ class Risk(UUIDPkMixin, TimestampMixin, Base):
             f"likelihood IN {LIKELIHOOD_LEVELS!r}", name="ck_risk_likelihood"
         ),
         CheckConstraint(f"status IN {RISK_STATUSES!r}", name="ck_risk_status"),
+        CheckConstraint(
+            f"lane IN {RISK_LANES!r} OR lane IS NULL", name="ck_risk_lane"
+        ),
+        CheckConstraint(
+            f"probability IN {LIKELIHOOD_LEVELS!r} OR probability IS NULL",
+            name="ck_risk_probability",
+        ),
+        CheckConstraint(
+            f"severity IN {IMPACT_LEVELS!r} OR severity IS NULL",
+            name="ck_risk_severity",
+        ),
     )
 
     workspace_id: Mapped[uuid.UUID] = mapped_column(PG_UUID(as_uuid=True), nullable=False)
@@ -167,3 +199,10 @@ class Risk(UUIDPkMixin, TimestampMixin, Base):
     mitigation: Mapped[str | None] = mapped_column(Text)
     owner: Mapped[str | None] = mapped_column(String(200))
     status: Mapped[str] = mapped_column(String(20), nullable=False, default="open")
+
+    # Insight-grade columns: capture-management taxonomy
+    lane: Mapped[str | None] = mapped_column(String(20))  # capture / proposal / delivery / customer
+    mission_impact: Mapped[str | None] = mapped_column(Text)
+    probability: Mapped[str | None] = mapped_column(String(20))
+    severity: Mapped[str | None] = mapped_column(String(20))
+    supporting_evidence: Mapped[list[str] | None] = mapped_column(ARRAY(String))

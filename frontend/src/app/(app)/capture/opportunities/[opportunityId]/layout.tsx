@@ -8,15 +8,16 @@ import clsx from "clsx";
 const TABS = [
   { slug: "", label: "Briefing" },
   { slug: "documents", label: "Documents" },
+  { slug: "customer-dna", label: "Customer DNA", emphasis: true },
   { slug: "summary", label: "Summary" },
   { slug: "compliance", label: "Compliance" },
   { slug: "evaluation", label: "Evaluation" },
+  { slug: "risks", label: "Risks" },
   { slug: "requirements", label: "Requirements" },
   { slug: "win-themes", label: "Win Themes" },
   { slug: "capabilities", label: "Capabilities" },
   { slug: "staffing", label: "Staffing" },
   { slug: "outline", label: "Outline" },
-  { slug: "risks", label: "Risks" },
   { slug: "market-intel", label: "Market Intel" },
   { slug: "assistant", label: "Assistant" },
 ];
@@ -46,7 +47,9 @@ export default function OpportunityLayout({
                 "px-3 py-2.5 text-[13px] font-medium border-b-2 -mb-px whitespace-nowrap",
                 active
                   ? "text-charcoal-900 border-steel-700"
-                  : "text-charcoal-500 border-transparent hover:text-charcoal-900",
+                  : t.emphasis
+                    ? "text-steel-700 border-transparent hover:text-charcoal-900"
+                    : "text-charcoal-500 border-transparent hover:text-charcoal-900",
               )}
             >
               {t.label}

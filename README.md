@@ -23,6 +23,54 @@ MissionIQ
 
 ---
 
+## The MissionIQ Difference — Insight, Not Extraction
+
+MissionIQ explicitly does **not** generate generic AI deliverables. Most
+"AI for capture" tools paraphrase the RFP back at you. MissionIQ does
+something different: before producing any consultant-grade output, it
+synthesizes a portrait of the customer.
+
+That portrait is the **Customer DNA Profile**. It is the platform's
+central synthesis step and the input every downstream module reads.
+
+```
+Opportunity Documents ┐
+Agency Mission         │
+Agency Strategic Plans │
+Operating Environment  │      ┌──────────────────────────┐
+Evaluation Criteria    ├─►  │   Customer DNA Profile   │  ──► Compliance Matrix
+Contract Context       │      │  • Mission                │  ──► Evaluation Criteria
+Market Intelligence    │      │  • Strategic Goals        │  ──► Risk Register
+Customer Profile       ┘      │  • Core Values            │  ──► (every future module)
+                              │  • Success Metrics        │
+                              │  • Operational Challenges │
+                              │  • Technology Priorities  │
+                              │  • Risk Priorities        │
+                              │  • Stakeholder Concerns   │
+                              └──────────────────────────┘
+```
+
+**Architectural guarantees:**
+
+- Any module with `requires_customer_dna = True` **refuses to call the
+  LLM** until a Customer DNA Profile exists. It returns
+  `status = "insufficient_context"` with a CTA that links directly to the
+  Customer DNA tab. There is no "generic" mode.
+- Every downstream prompt renders the DNA Profile into the LLM context
+  and instructs the model to tie its analytical claims to specific DNA
+  attributes by name (e.g. *"Aligns with Strategic Goal #2:
+  health-data interoperability"*).
+- Structured writeback persists every consultant-grade row to its
+  relational table (`compliance_requirement.why_requirement_exists`,
+  `evaluation_criterion.evaluation_intelligence`, `risk.lane`,
+  `risk.mission_impact`, …) so CSV exports and joined queries reflect
+  the latest insight-grade analysis, not just raw JSON.
+
+This is what makes MissionIQ outputs read like a senior capture manager
+or management consultant produced them, rather than an AI summarizer.
+
+---
+
 ## Architecture Documents
 
 Read these in order before contributing:
@@ -88,36 +136,63 @@ provider configured the same path produces substantive output.
    - A red error pill with the exact error message if processing fails
    Each transition is written to the **audit log** with stage, model, page,
    and chunk metadata.
-4. **Opportunity Summary tab** — click **Generate Opportunity Summary**. The
-   output renders four canonical sections:
-   - **Executive Summary** — the bottom line in 2–4 sentences
-   - **Key Findings** — discrete evidence-backed observations
-   - **Supporting Evidence** — each finding mapped to its source citation
-   - **Recommended Actions** — concrete next moves for the capture team
-   Every citation is clickable. Hover any `[1]` chip to see the document
-   name, page, section, and snippet. If you delete all documents and
-   regenerate, the module returns an `insufficient_context` status with an
-   amber callout asking you to upload more material — it will not invent
-   findings.
-5. **Intelligence Assistant tab** — start a thread. Try one of the suggested
-   questions ("What are the key evaluation drivers?"). Each answer:
-   - Carries a **Grounded** / **Insufficient context** status pill
-   - Lists source citations as `[1] [2] …` chips with hover previews
-   - Shows which model produced it
-   If you ask before any document is `ready`, the Assistant refuses *before*
-   calling the LLM and tells you exactly what to upload. The refusal is
-   itself audit-logged as `chat.message.refused`.
-6. **Audit trail** — every user-visible action above produces an `audit_log`
-   row (`document.uploaded`, `document.processing.parsing/chunking/
-   embedding/ready/failed`, `ai.module.run`, `chat.message.received`,
-   `chat.message.sent`, `chat.message.refused`). Query it directly:
+4. **Customer DNA tab** — click **Generate Customer DNA Profile**. This is
+   the platform's central synthesis step. MissionIQ produces:
+   - **Mission** — what this customer uniquely exists to accomplish
+   - **Strategic Goals** — the multi-year goals they are pursuing
+   - **Core Values** — how they decide
+   - **Success Metrics** — what they actually measure
+   - **Operational Challenges** — frictions / unsolved problems
+   - **Technology Priorities** — modernization initiatives
+   - **Risk Priorities** — risks they are actively trying to reduce
+   - **Stakeholder Concerns** — what named roles (CO, PM, Mission Owner,
+     CIO, OIG) care about
+   The DNA Profile is also surfaced as a card on the **Briefing** tab. If
+   you skip this step, the next three modules will refuse to run.
+5. **Opportunity Summary tab** — click **Generate Opportunity Summary**. The
+   output renders four canonical sections (Executive Summary, Key Findings,
+   Supporting Evidence, Recommended Actions). Every citation is clickable
+   and hover-previews the document/page/snippet.
+6. **Compliance Matrix tab** — click **Generate Compliance Matrix**. Every
+   row carries the consultant-grade columns:
+   - **Why Requirement Exists** — the underlying need or regulatory driver
+   - **Mission Alignment** — the DNA Strategic Goal it ladders into
+   - **Customer Priority** — critical / high / medium / low, derived from
+     Section M weighting + DNA stakeholder concerns
+   Rows are persisted to `compliance_requirement` so CSV export reflects
+   the same insight payload.
+7. **Evaluation Criteria tab** — click **Generate**. The output has two
+   parts: a structured Section M decomposition (factor, subfactor,
+   importance, required response elements) *and* the
+   **Evaluation Intelligence** payload (Likely Decision Drivers, Potential
+   Discriminators, Potential Weaknesses, Strategic Recommendations), each
+   tied to specific DNA attributes by name.
+8. **Risk Register tab** — click **Generate**. Risks are categorized
+   into the four canonical capture lanes:
+   - **Capture Risks** — threats to winning the bid
+   - **Proposal Risks** — threats to producing a compliant proposal on time
+   - **Delivery Risks** — threats to executing the contract after award
+   - **Customer Risks** — threats to the customer's mission or reputation
+   Every risk includes Mission Impact, Probability, Severity, Mitigation,
+   and Supporting Evidence (E#/M# back to source).
+9. **Intelligence Assistant tab** — start a thread. Try one of the suggested
+   questions. Each answer carries a **Grounded** / **Insufficient context**
+   status pill, lists source citations as `[1] [2] …` chips, and shows
+   which model produced it. If you ask before any document is `ready`,
+   the Assistant refuses *before* calling the LLM. The refusal is
+   audit-logged as `chat.message.refused`.
+10. **Audit trail** — every user-visible action above produces an
+    `audit_log` row (`document.uploaded`,
+    `document.processing.parsing/chunking/embedding/ready/failed`,
+    `ai.module.run`, `chat.message.received`, `chat.message.sent`,
+    `chat.message.refused`). Query it directly:
 
-   ```sql
-   SELECT created_at, action, target_type, meta
-   FROM audit_log
-   ORDER BY created_at DESC
-   LIMIT 25;
-   ```
+    ```sql
+    SELECT created_at, action, target_type, meta
+    FROM audit_log
+    ORDER BY created_at DESC
+    LIMIT 25;
+    ```
 
 ---
 
@@ -174,19 +249,23 @@ npm run dev
 ✅ LLM provider abstraction (OpenAI, Anthropic, Bedrock, Azure OpenAI, local_stub)
 ✅ Document upload + extraction (PDF / DOCX / TXT) + chunking + embeddings, with live per-stage progress (`uploaded → parsing → chunking → embedding → ready / failed`) and audit log entries on every transition
 ✅ RAG retrieval engine with source-cited citations
-✅ Module registry + `BaseIntelligenceModule`
-✅ **Capture: Opportunity Summary** module wired end-to-end as the reference pattern (Executive Summary · Key Findings · Supporting Evidence · Recommended Actions)
+✅ Module registry + `BaseIntelligenceModule` with `requires_customer_dna` prerequisite (downstream modules refuse to call the LLM without a DNA Profile)
+✅ **Capture: Customer DNA Profile** module — the central synthesis step (Mission · Strategic Goals · Core Values · Success Metrics · Operational Challenges · Technology Priorities · Risk Priorities · Stakeholder Concerns)
+✅ **Capture: Opportunity Summary** module (Executive Summary · Key Findings · Supporting Evidence · Recommended Actions)
+✅ **Capture: Compliance Matrix** module — DNA-aware columns: Why Requirement Exists · Mission Alignment · Customer Priority, with structured writeback to `compliance_requirement`
+✅ **Capture: Evaluation Criteria** module — Section M decomposition plus Evaluation Intelligence (Likely Decision Drivers · Potential Discriminators · Potential Weaknesses · Strategic Recommendations), persisted to `evaluation_criterion`
+✅ **Capture: Risk Register** module — four-lane taxonomy (Capture · Proposal · Delivery · Customer) with Mission Impact · Probability · Severity · Mitigation · Supporting Evidence per risk, persisted to `risk`
 ✅ **Intelligence Assistant** with hard grounding contract: refuses to call the LLM when no documents are indexed or retrieval returns no hits; every answer carries citations and a status pill
 ✅ SAM.gov market intelligence client + search + import + link-to-opportunity
-✅ CSV exports (Compliance, Risks) — endpoints live, populated once those modules run
+✅ CSV exports (Compliance, Risks) — populated by the structured writeback path
 ✅ AuditLog
 ✅ Frontend design system (tokens, primitives, briefing layout, citation chips)
 ✅ Platform shell with module-aware left nav and stubbed module groups
 ✅ Pages: Login, Signup, Dashboard, Workspaces, Opportunity list/detail, Documents, Module workbenches, Market Intelligence, Assistant
 ✅ Seed script with example opportunity + example documents
-✅ Unit tests for auth, workspace scoping, LLM router, RAG
+✅ Unit tests for auth, workspace scoping, LLM router, RAG, document status state machine, Opportunity Summary contract, Customer DNA contract, and the DNA-prerequisite enforcement for downstream modules
 
-📋 Remaining Capture modules (Compliance Matrix, Evaluation Criteria, Requirement Breakdown, Win Themes, Capability Gaps, Staffing Assumptions, Proposal Outline, Risk Register, Market Intel Summary) — each follows the same ~50-line pattern as Opportunity Summary; see roadmap.
+📋 Remaining Capture modules (Requirement Breakdown, Win Themes, Capability Gaps, Staffing Assumptions, Proposal Outline, Market Intel Summary) — each follows the same ~80-line pattern as the DNA-aware modules already shipped.
 
 ❌ Out of MVP scope by design: SSO, MFA, email flows, real-time collaboration, FedRAMP control implementation.
 
@@ -196,12 +275,32 @@ See the [Implementation Roadmap](docs/architecture/07-implementation-roadmap.md)
 
 ## Adding a New Intelligence Module
 
-The platform is module-pluggable. To add (e.g.) `capture.compliance_matrix`:
+The platform is module-pluggable. To add (e.g.) `capture.win_themes`:
 
-1. Create `backend/app/llm/prompts/capture/compliance_matrix.v1.yaml`.
-2. Create `backend/app/intelligence/modules/capture/compliance_matrix.py` extending `BaseIntelligenceModule`.
+1. Create `backend/app/llm/prompts/capture/win_themes.v1.yaml`.
+   - Set up an `EVIDENCE FROM UPLOADED DOCUMENTS` block.
+   - **If your module consumes the Customer DNA Profile** (which it almost
+     certainly should), add a `CUSTOMER DNA PROFILE` block that renders
+     `{{ customer_dna.mission }}`, `{{ customer_dna.strategic_goals }}`,
+     etc., and instruct the LLM to tie each analytical claim to a named
+     DNA attribute.
+2. Create `backend/app/intelligence/modules/capture/win_themes.py` extending
+   `BaseIntelligenceModule`. Set `requires_customer_dna = True` if the
+   module reads the DNA — the orchestrator will load the latest profile
+   and refuse to call the LLM if one does not exist yet, returning a
+   friendly `_missing_dependency: "customer_dna"` payload that the UI
+   surfaces as a deep-link to the DNA tab.
 3. Register it in `backend/app/intelligence/registry.py`.
-4. The frontend's `/capture/opportunities/[id]/compliance/page.tsx` already exists with a "Generate" CTA bound to `/modules/{module_id}/run` — no changes needed beyond the page's rendering layer.
+4. Define a Pydantic `*Output` schema in `backend/app/schemas/intelligence.py`
+   and bind it to the module via `output_model`. The orchestrator
+   validates every LLM payload against this schema.
+5. The frontend page at `/capture/opportunities/[id]/win-themes/page.tsx`
+   already exists with a `ModuleWorkbench` wrapper — just supply an
+   `outputRenderer` that consumes the AI output and citations.
+6. *(Optional)* If your module maps to a first-class relational table
+   (like Compliance / Evaluation / Risk), add a structured writeback
+   helper in `backend/app/services/intelligence_service.py` so CSV
+   exports and joined queries pick it up.
 
 To add a whole new module group (e.g. Operations Intelligence), see the [Implementation Roadmap, Milestone 6](docs/architecture/07-implementation-roadmap.md#milestone-6--second-module-group).
 

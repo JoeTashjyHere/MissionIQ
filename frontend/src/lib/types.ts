@@ -108,6 +108,105 @@ export interface ModuleSpec {
   description: string;
   version: string;
   output_schema_summary: Record<string, string>;
+  requires_customer_dna: boolean;
+}
+
+// ── Module output shapes ──────────────────────────────────────────────────
+
+export interface SupportingEvidenceItem {
+  evidence_ref: string;
+  finding: string;
+}
+
+export interface CustomerDnaProfile {
+  mission: string;
+  strategic_goals: string[];
+  core_values: string[];
+  success_metrics: string[];
+  operational_challenges: string[];
+  technology_priorities: string[];
+  risk_priorities: string[];
+  stakeholder_concerns: string[];
+
+  executive_summary: string;
+  key_findings?: string[];
+  supporting_evidence?: SupportingEvidenceItem[];
+  recommended_actions?: string[];
+  confidence?: "high" | "medium" | "low" | "insufficient";
+}
+
+export interface ComplianceRow {
+  requirement_id: string;
+  requirement_text: string;
+  source_document?: string | null;
+  source_page?: number | null;
+  source_section?: string | null;
+  category?: string | null;
+  response_owner?: string | null;
+  proposed_status?: "open" | "in_progress" | "complete" | "n_a";
+  notes?: string | null;
+  why_requirement_exists: string;
+  mission_alignment: string;
+  customer_priority: "critical" | "high" | "medium" | "low";
+}
+
+export interface ComplianceMatrixOutput {
+  executive_summary: string;
+  key_findings: string[];
+  supporting_evidence?: SupportingEvidenceItem[];
+  recommended_actions: string[];
+  rows: ComplianceRow[];
+  coverage_gaps?: string[];
+}
+
+export interface EvaluationFactor {
+  factor: string;
+  subfactor?: string | null;
+  importance:
+    | "most_important"
+    | "important"
+    | "less_important"
+    | "equal"
+    | "unspecified";
+  required_response_elements?: string[];
+  source_section?: string | null;
+  source_page?: number | null;
+}
+
+export interface EvaluationCriteriaOutput {
+  executive_summary: string;
+  key_findings: string[];
+  supporting_evidence?: SupportingEvidenceItem[];
+  recommended_actions: string[];
+  factors: EvaluationFactor[];
+  evaluation_intelligence: string;
+  likely_decision_drivers: string[];
+  potential_discriminators: string[];
+  potential_weaknesses: string[];
+  strategic_recommendations: string[];
+}
+
+export interface RiskItem {
+  title: string;
+  description: string;
+  mission_impact: string;
+  probability: "low" | "medium" | "high";
+  severity: "low" | "medium" | "high" | "critical";
+  mitigation: string;
+  supporting_evidence?: string[];
+  owner?: string | null;
+}
+
+export interface RiskRegisterOutput {
+  executive_summary: string;
+  key_findings: string[];
+  supporting_evidence?: SupportingEvidenceItem[];
+  recommended_actions: string[];
+  capture_risks: RiskItem[];
+  proposal_risks: RiskItem[];
+  delivery_risks: RiskItem[];
+  customer_risks: RiskItem[];
+  top_risks?: string[];
 }
 
 export type DocumentCitation = {
