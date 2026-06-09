@@ -17,7 +17,7 @@ import uuid
 from datetime import datetime
 from typing import Any, Literal
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 from app.schemas.common import Citation, ORMModel
 
@@ -414,4 +414,178 @@ class WinStrategyOutput(BaseModel):
     inputs_missing: list[str] = []
 
     key_findings: list[str] = []
+    citations: list[dict] = []
+
+
+# ══════════════════════════════════════════════════════════════════════════
+# Executive Briefings & Gate Reviews
+# ══════════════════════════════════════════════════════════════════════════
+# Leadership-facing deliverables that turn analysis into DECISIONS. These
+# modules synthesize every upstream intelligence output (Customer DNA, Company
+# DNA, Capability Match, Evaluation Intelligence, Risk Intelligence, Win
+# Strategy, Market Intelligence, Pursuit Memory) into boardroom-ready packages.
+#
+# Two epistemic systems run side by side:
+#   • Every analytic statement is tagged Evidence / Inference / Assumption.
+#   • Recalled institutional knowledge is surfaced as HISTORICAL EVIDENCE.
+
+
+class Confidence(BaseModel):
+    level: Literal["high", "medium", "low"] = "medium"
+    score: int = 50  # 0–100
+    rationale: str = ""
+
+
+class HistoricalEvidence(BaseModel):
+    """Institutional knowledge recalled from Pursuit Memory. Every item here is
+    HISTORICAL EVIDENCE — proven on prior pursuits, distinct from the current
+    opportunity's evidence."""
+
+    similar_opportunities: list[str] = []
+    historical_win_themes: list[str] = []
+    historical_risks: list[str] = []
+    historical_discriminators: list[str] = []
+    agency_patterns: list[str] = []
+
+
+# ── Executive Brief (capture.executive_brief) ──
+
+
+class OpportunitySnapshot(BaseModel):
+    agency: str | None = None
+    program: str | None = None
+    estimated_value: str | None = None
+    contract_vehicle: str | None = None
+    due_date: str | None = None
+    incumbent: str | None = None
+    pursuit_status: str | None = None
+    win_confidence: int = 50
+
+
+class CustomerIntelligence(BaseModel):
+    strategic_priorities: list[str] = []
+    success_metrics: list[str] = []
+    stakeholder_concerns: list[str] = []
+    mission_drivers: list[str] = []
+
+
+class CompanyPosition(BaseModel):
+    strengths: list[StrategicPoint] = []
+    gaps: list[StrategicPoint] = []
+    proof_points: list[StrategicPoint] = []
+    competitive_advantages: list[StrategicPoint] = []
+
+
+class BriefWinStrategy(BaseModel):
+    recommended_discriminators: list[StrategicPoint] = []
+    key_themes: list[StrategicPoint] = []
+    evaluation_priorities: list[StrategicPoint] = []
+    critical_actions: list[CaptureAction] = []
+
+
+class BriefRisk(BaseModel):
+    title: str
+    severity: Literal["low", "medium", "high", "critical"] = "medium"
+    mitigation: str | None = None
+    basis: StrategicBasis = "inference"
+    sources: list[str] = []
+
+
+class BriefRisks(BaseModel):
+    top_capture_risks: list[BriefRisk] = []
+    top_proposal_risks: list[BriefRisk] = []
+    top_delivery_risks: list[BriefRisk] = []
+
+
+class ExecRecommendation(BaseModel):
+    recommendation: Literal[
+        "pursue_aggressively", "pursue_with_conditions", "monitor", "no_bid"
+    ] = "pursue_with_conditions"
+    confidence_level: Literal["high", "medium", "low"] = "medium"
+    confidence_score: int = 50
+    rationale: str = ""
+    required_conditions: list[str] = []
+
+
+class ExecutiveBriefOutput(BaseModel):
+    """A one-screen, boardroom-ready executive brief. Section-modular so it can
+    later map cleanly to slides for PowerPoint / PDF / Word export."""
+
+    headline: str = ""
+    opportunity_snapshot: OpportunitySnapshot
+    customer_intelligence: CustomerIntelligence
+    company_position: CompanyPosition
+    win_strategy: BriefWinStrategy
+    risks: BriefRisks
+    executive_recommendation: ExecRecommendation
+    historical_evidence: HistoricalEvidence = Field(default_factory=HistoricalEvidence)
+    inputs_used: list[str] = []
+    inputs_missing: list[str] = []
+    key_findings: list[str] = []
+    citations: list[dict] = []
+
+
+# ── Gate Review (capture.gate_review) ──
+
+
+class ScoreBlock(BaseModel):
+    score: int = 50  # 0–100
+    rationale: str = ""
+    basis: StrategicBasis = "inference"
+    drivers: list[str] = []
+    sources: list[str] = []
+
+
+class GateReviewOutput(BaseModel):
+    """A formal bid/no-bid gate-review package — consulting-grade scoring plus
+    the reasons, actions, questions, and escalations a board needs to decide."""
+
+    headline: str = ""
+    attractiveness_score: ScoreBlock
+    competitive_position_score: ScoreBlock
+    capability_alignment_score: ScoreBlock
+    # Higher risk_score == MORE risk (worse). The rationale states the drivers.
+    risk_score: ScoreBlock
+    probability_of_win: Confidence
+    top_reasons_to_pursue: list[StrategicPoint] = []
+    top_reasons_not_to_pursue: list[StrategicPoint] = []
+    decision_recommendation: Literal[
+        "pursue", "pursue_with_conditions", "no_bid"
+    ] = "pursue_with_conditions"
+    decision_summary: str = ""
+    required_executive_actions: list[CaptureAction] = []
+    open_questions: list[str] = []
+    escalations: list[str] = []
+    historical_evidence: HistoricalEvidence = Field(default_factory=HistoricalEvidence)
+    inputs_used: list[str] = []
+    inputs_missing: list[str] = []
+    key_findings: list[str] = []
+    citations: list[dict] = []
+
+
+# ── Bid / No-Bid Decision (capture.bid_decision) ──
+
+
+class DecisionFactor(BaseModel):
+    name: str
+    score: int = 50  # 0–100
+    rationale: str = ""
+    evidence: list[str] = []
+    confidence: Literal["high", "medium", "low"] = "medium"
+    basis: StrategicBasis = "inference"
+
+
+class BidDecisionOutput(BaseModel):
+    """A focused executive bid/no-bid recommendation scored across the six
+    canonical decision factors."""
+
+    recommendation: Literal["bid", "conditional_bid", "no_bid"] = "conditional_bid"
+    executive_summary: str = ""
+    confidence: Confidence
+    factors: list[DecisionFactor] = []
+    decision_drivers: list[str] = []
+    required_next_steps: list[CaptureAction] = []
+    historical_evidence: HistoricalEvidence = Field(default_factory=HistoricalEvidence)
+    inputs_used: list[str] = []
+    inputs_missing: list[str] = []
     citations: list[dict] = []

@@ -1,0 +1,151 @@
+id: capture.bid_decision
+version: v1
+description: >
+  A focused executive bid/no-bid recommendation. Scores the six canonical
+  decision factors (Strategic Alignment, Revenue Potential, Relationship
+  Position, Competitive Position, Delivery Readiness, Risk Profile) each with
+  rationale, evidence, and confidence, then returns Bid / Conditional Bid /
+  No-Bid with decision drivers and required next steps.
+
+system: |
+  You are a senior capture executive delivering a crisp bid/no-bid call to
+  leadership. Be decisive and candid. Do NOT summarize documents — render a
+  judgment leadership can act on immediately.
+
+  SCORE THE SIX FACTORS (0–100 each). For each factor provide:
+   - name (use exactly): "Strategic Alignment", "Revenue Potential",
+     "Relationship Position", "Competitive Position", "Delivery Readiness",
+     "Risk Profile"  (for Risk Profile, a HIGHER score means a BETTER/lower-risk
+     profile, so all six scores are "higher is better")
+   - score (0–100)
+   - rationale (one or two sentences)
+   - evidence: source tokens ("Customer DNA: mission", "Win Strategy",
+     "Capability Match", "Risk Register", "E1", "M1", …)
+   - confidence: "high" | "medium" | "low"
+   - basis: "evidence" | "inference" | "assumption"
+
+  HARD RULES
+  ----------
+  1. Recommendation MUST be one of "bid" | "conditional_bid" | "no_bid", with a
+     confidence (level + 0–100 score + rationale).
+  2. EPISTEMIC HONESTY. Use `basis` per factor; do not claim evidence you were
+     not given. Missing inputs → lean on inference/assumption and lower
+     confidence.
+  3. HISTORICAL EVIDENCE. If PURSUIT MEMORY is present, fill
+     `historical_evidence` from the recalled prior pursuits.
+  4. Provide an `executive_summary` (2–4 sentences), `decision_drivers` (the
+     few factors that drive the call), and `required_next_steps`.
+  5. Record `inputs_used` / `inputs_missing`.
+
+  Return ONLY a single JSON object matching the schema. No markdown fences.
+
+user: |
+  OPPORTUNITY
+  ───────────
+  Name:      {{ opportunity.name }}
+  Agency:    {{ opportunity.agency or "unknown" }}
+  Vehicle:   {{ opportunity.contract_vehicle or "unknown" }}
+  Incumbent: {{ opportunity.incumbent or "unknown" }}
+  Value:     {{ opportunity.estimated_value_cents or "unknown" }}
+
+  ═══════════════════════ SYNTHESIS INPUTS ═══════════════════════
+
+  CUSTOMER DNA PROFILE
+  ────────────────────
+  Mission:               {{ customer_dna.mission }}
+  Strategic goals:       {{ customer_dna.strategic_goals | join("; ") if customer_dna.strategic_goals else "(n/a)" }}
+  Risk priorities:       {{ customer_dna.risk_priorities | join("; ") if customer_dna.risk_priorities else "(n/a)" }}
+
+  {% if company_dna %}
+  COMPANY DNA PROFILE
+  ───────────────────
+  Summary:          {{ company_dna.company_summary or "(n/a)" }}
+  Core capabilities:{{ company_dna.core_capabilities | join("; ") if company_dna.core_capabilities else "(n/a)" }}
+  Differentiators:  {{ company_dna.differentiators | join("; ") if company_dna.differentiators else "(n/a)" }}
+  {% else %}
+  COMPANY DNA / PROFILE: *** MISSING — no seller-side synthesis available. ***
+  {% endif %}
+
+  {% if win_strategy %}
+  WIN STRATEGY
+  ────────────
+  Recommendation:  {{ win_strategy.pursuit_recommendation }}
+  Win confidence:  {{ win_strategy.win_confidence_assessment.score if win_strategy.win_confidence_assessment else "(n/a)" }}
+  {% else %}
+  WIN STRATEGY: *** MISSING ***
+  {% endif %}
+
+  {% if capability_match %}
+  CAPABILITY MATCH
+  ────────────────
+  Win assessment:   {{ capability_match.win_assessment or "(n/a)" }}
+  Fit score:        {{ capability_match.fit_score or "(n/a)" }}
+  {% else %}
+  CAPABILITY MATCH: *** MISSING ***
+  {% endif %}
+
+  {% if risk_register %}
+  RISK INTELLIGENCE
+  ─────────────────
+  Top risks: {{ risk_register.top_risks | join("; ") if risk_register.top_risks else "(n/a)" }}
+  {% else %}
+  RISK REGISTER: *** MISSING ***
+  {% endif %}
+
+  {% if memory %}
+  PURSUIT MEMORY (HISTORICAL EVIDENCE)
+  ────────────────────────────────────
+  {{ memory.summary }}
+  {% if memory.similar_opportunities %}Similar prior pursuits: {% for s in memory.similar_opportunities %}{{ s.name }}{% if not loop.last %}; {% endif %}{% endfor %}{% endif %}
+  {% if memory.prior_win_themes %}Prior win themes: {% for w in memory.prior_win_themes %}{{ w.label }}{% if not loop.last %}; {% endif %}{% endfor %}{% endif %}
+  {% if memory.prior_risks %}Prior risks: {% for r in memory.prior_risks %}{{ r.label }}{% if not loop.last %}; {% endif %}{% endfor %}{% endif %}
+  {% else %}
+  PURSUIT MEMORY: (no prior pursuit history yet)
+  {% endif %}
+
+  OPPORTUNITY DOCUMENT EVIDENCE
+  ─────────────────────────────
+  {% if evidence %}
+  {% for ev in evidence %}
+  [E{{ loop.index }}] document="{{ ev.document_name }}" page={{ ev.page_start or "?" }}
+  ---
+  {{ ev.snippet }}
+  ---
+  {% endfor %}
+  {% else %}
+  (no document evidence available)
+  {% endif %}
+
+  {% if market_evidence %}
+  MARKET INTELLIGENCE
+  ───────────────────
+  {% for mi in market_evidence %}
+  [M{{ loop.index }}] title="{{ mi.document_name }}"
+  ---
+  {{ mi.snippet }}
+  ---
+  {% endfor %}
+  {% endif %}
+
+  ═══════════════════════════════════════════════════════════════
+
+  RETURN JSON WITH THIS SCHEMA
+  ────────────────────────────
+  {
+    "recommendation": "bid"|"conditional_bid"|"no_bid",
+    "executive_summary": string,
+    "confidence": {"level": "high"|"medium"|"low", "score": number, "rationale": string},
+    "factors": [
+      {"name": string, "score": number, "rationale": string, "evidence": string[], "confidence": "high"|"medium"|"low", "basis": "evidence"|"inference"|"assumption"}
+    ],
+    "decision_drivers": string[],
+    "required_next_steps": [ {"action": string, "rationale": string, "priority": "immediate"|"near_term"|"pre_rfp", "owner": string|null} ],
+    "historical_evidence": {
+      "similar_opportunities": string[], "historical_win_themes": string[],
+      "historical_risks": string[], "historical_discriminators": string[],
+      "agency_patterns": string[]
+    },
+    "inputs_used": string[],
+    "inputs_missing": string[],
+    "citations": [ {"evidence_ref": "E1", "claim": string} ]
+  }

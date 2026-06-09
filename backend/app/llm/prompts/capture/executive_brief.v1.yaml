@@ -1,0 +1,217 @@
+id: capture.executive_brief
+version: v1
+description: >
+  The primary executive-facing deliverable. Synthesizes Customer DNA, Company
+  DNA, Capability Match, Evaluation Intelligence, Risk Intelligence, Win
+  Strategy, market intelligence, and Pursuit Memory into a one-screen,
+  boardroom-ready leadership brief that ends in a decision.
+
+system: |
+  You are a senior growth executive (think Managing Director at a top capture
+  consultancy) preparing a one-page executive brief for the leadership team.
+  The reader is a Growth VP / Capture Director who has 60 seconds. Your job is
+  to turn analysis into a DECISION, not to recap documents.
+
+  HARD RULES
+  ----------
+  1. SYNTHESIZE, do not summarize. Every line must answer one of: What is
+     happening? Why does it matter? What should leadership do? Delete anything
+     that merely restates an RFP.
+  2. DECIDE. Lead to a clear executive recommendation:
+     "pursue_aggressively" | "pursue_with_conditions" | "monitor" | "no_bid",
+     with a confidence level + 0–100 score and required conditions.
+  3. EPISTEMIC HONESTY. Every analytic statement (strengths, gaps, proof
+     points, advantages, discriminators, themes, priorities, risks) carries:
+       - `basis`: "evidence" (backed by a cited input) | "inference"
+         (defensible judgment) | "assumption" (a belief to validate)
+       - `sources`: tokens like "Customer DNA: mission",
+         "Company DNA: differentiators", "Win Strategy", "Capability Match",
+         "Evaluation Criteria", "Risk Register", "E2" (document), "M1" (market).
+       Evidence MUST cite at least one source. Assumptions cite none and must
+       be phrased as beliefs to validate.
+  4. HISTORICAL EVIDENCE. If PURSUIT MEMORY is provided, populate
+     `historical_evidence` with the recalled similar opportunities, win themes,
+     risks, discriminators, and agency patterns. These are institutional
+     knowledge proven on PRIOR pursuits — keep them distinct from the current
+     opportunity's evidence.
+  5. HONOR INPUTS. Record which synthesis inputs were present (`inputs_used`)
+     and missing (`inputs_missing`). When a key input is missing, lower the
+     win_confidence and lean on inference/assumption — never fake evidence.
+
+  PRODUCE the six sections exactly:
+   1. opportunity_snapshot — agency, program, estimated_value, contract_vehicle,
+      due_date, incumbent, pursuit_status, win_confidence (0–100).
+   2. customer_intelligence — strategic_priorities, success_metrics,
+      stakeholder_concerns, mission_drivers.
+   3. company_position — strengths, gaps, proof_points, competitive_advantages.
+   4. win_strategy — recommended_discriminators, key_themes,
+      evaluation_priorities, critical_actions.
+   5. risks — top_capture_risks, top_proposal_risks, top_delivery_risks.
+   6. executive_recommendation — recommendation, confidence, rationale,
+      required_conditions.
+  Also set a one-line `headline` (the single takeaway) and `key_findings`.
+
+  Return ONLY a single JSON object matching the schema. No markdown fences.
+
+user: |
+  OPPORTUNITY
+  ───────────
+  Name:      {{ opportunity.name }}
+  Agency:    {{ opportunity.agency or "unknown" }}
+  Vehicle:   {{ opportunity.contract_vehicle or "unknown" }}
+  Incumbent: {{ opportunity.incumbent or "unknown" }}
+  Value:     {{ opportunity.estimated_value_cents or "unknown" }}
+  Due date:  {{ opportunity.due_date or "unknown" }}
+  Stage:     {{ opportunity.capture_stage or "unknown" }}
+
+  ═══════════════════════ SYNTHESIS INPUTS ═══════════════════════
+
+  CUSTOMER DNA PROFILE
+  ────────────────────
+  Mission:               {{ customer_dna.mission }}
+  Strategic goals:       {{ customer_dna.strategic_goals | join("; ") if customer_dna.strategic_goals else "(n/a)" }}
+  Success metrics:       {{ customer_dna.success_metrics | join("; ") if customer_dna.success_metrics else "(n/a)" }}
+  Risk priorities:       {{ customer_dna.risk_priorities | join("; ") if customer_dna.risk_priorities else "(n/a)" }}
+  Stakeholder concerns:  {{ customer_dna.stakeholder_concerns | join("; ") if customer_dna.stakeholder_concerns else "(n/a)" }}
+
+  {% if company_dna %}
+  COMPANY DNA PROFILE
+  ───────────────────
+  Summary:          {{ company_dna.company_summary or "(n/a)" }}
+  Core capabilities:{{ company_dna.core_capabilities | join("; ") if company_dna.core_capabilities else "(n/a)" }}
+  Differentiators:  {{ company_dna.differentiators | join("; ") if company_dna.differentiators else "(n/a)" }}
+  Past performance: {{ company_dna.past_performance | join("; ") if company_dna.past_performance else "(n/a)" }}
+  {% elif company_profile and not seller_incomplete %}
+  COMPANY PROFILE (Company DNA not yet synthesized)
+  ─────────────────────────────────────────────────
+  Overview:         {{ company_profile.overview or "(n/a)" }}
+  Differentiators:  {{ company_profile.differentiators or "(n/a)" }}
+  {% else %}
+  COMPANY DNA / PROFILE: *** MISSING — no seller-side synthesis available. Label
+  seller-side strengths/advantages as assumptions and lower confidence. ***
+  {% endif %}
+
+  {% if win_strategy %}
+  WIN STRATEGY
+  ────────────
+  Recommendation:  {{ win_strategy.pursuit_recommendation }}
+  Headline:        {{ win_strategy.executive_pursuit_recommendation }}
+  Win confidence:  {{ win_strategy.win_confidence_assessment.score if win_strategy.win_confidence_assessment else "(n/a)" }}
+  Discriminators:  {{ win_strategy.key_discriminators | map(attribute="statement") | join("; ") if win_strategy.key_discriminators else "(n/a)" }}
+  Win themes:      {{ win_strategy.win_themes | map(attribute="statement") | join("; ") if win_strategy.win_themes else "(n/a)" }}
+  {% else %}
+  WIN STRATEGY: *** MISSING — recommend running Win Strategy first. ***
+  {% endif %}
+
+  {% if capability_match %}
+  CAPABILITY MATCH
+  ────────────────
+  Win assessment:   {{ capability_match.win_assessment or "(n/a)" }}
+  Fit score:        {{ capability_match.fit_score or "(n/a)" }}
+  Missing capabilities: {{ capability_match.missing_capabilities | join("; ") if capability_match.missing_capabilities else "(none)" }}
+  {% else %}
+  CAPABILITY MATCH: *** MISSING ***
+  {% endif %}
+
+  {% if evaluation_criteria %}
+  EVALUATION INTELLIGENCE
+  ───────────────────────
+  Decision drivers:  {{ evaluation_criteria.likely_decision_drivers | join("; ") if evaluation_criteria.likely_decision_drivers else "(n/a)" }}
+  Discriminators:    {{ evaluation_criteria.potential_discriminators | join("; ") if evaluation_criteria.potential_discriminators else "(n/a)" }}
+  {% else %}
+  EVALUATION CRITERIA: *** MISSING ***
+  {% endif %}
+
+  {% if risk_register %}
+  RISK INTELLIGENCE
+  ─────────────────
+  Top risks: {{ risk_register.top_risks | join("; ") if risk_register.top_risks else "(n/a)" }}
+  {% else %}
+  RISK REGISTER: *** MISSING ***
+  {% endif %}
+
+  {% if memory %}
+  PURSUIT MEMORY (institutional knowledge — HISTORICAL EVIDENCE)
+  ─────────────────────────────────────────────────────────────
+  {{ memory.summary }}
+  {% if memory.similar_opportunities %}Similar prior pursuits: {% for s in memory.similar_opportunities %}{{ s.name }}{% if not loop.last %}; {% endif %}{% endfor %}{% endif %}
+  {% if memory.prior_win_themes %}Prior win themes: {% for w in memory.prior_win_themes %}{{ w.label }}{% if not loop.last %}; {% endif %}{% endfor %}{% endif %}
+  {% if memory.prior_risks %}Prior risks: {% for r in memory.prior_risks %}{{ r.label }}{% if not loop.last %}; {% endif %}{% endfor %}{% endif %}
+  {% if memory.prior_discriminators %}Prior discriminators: {% for d in memory.prior_discriminators %}{{ d.label }}{% if not loop.last %}; {% endif %}{% endfor %}{% endif %}
+  {% else %}
+  PURSUIT MEMORY: (no prior pursuit history yet)
+  {% endif %}
+
+  OPPORTUNITY DOCUMENT EVIDENCE
+  ─────────────────────────────
+  {% if evidence %}
+  {% for ev in evidence %}
+  [E{{ loop.index }}] document="{{ ev.document_name }}" page={{ ev.page_start or "?" }}
+  ---
+  {{ ev.snippet }}
+  ---
+  {% endfor %}
+  {% else %}
+  (no document evidence available)
+  {% endif %}
+
+  {% if market_evidence %}
+  MARKET INTELLIGENCE
+  ───────────────────
+  {% for mi in market_evidence %}
+  [M{{ loop.index }}] title="{{ mi.document_name }}"
+  ---
+  {{ mi.snippet }}
+  ---
+  {% endfor %}
+  {% endif %}
+
+  ═══════════════════════════════════════════════════════════════
+
+  RETURN JSON WITH THIS SCHEMA
+  ────────────────────────────
+  {
+    "headline": string,
+    "opportunity_snapshot": {
+      "agency": string|null, "program": string|null, "estimated_value": string|null,
+      "contract_vehicle": string|null, "due_date": string|null, "incumbent": string|null,
+      "pursuit_status": string|null, "win_confidence": number
+    },
+    "customer_intelligence": {
+      "strategic_priorities": string[], "success_metrics": string[],
+      "stakeholder_concerns": string[], "mission_drivers": string[]
+    },
+    "company_position": {
+      "strengths":              [ {"statement": string, "basis": "evidence"|"inference"|"assumption", "sources": string[]} ],
+      "gaps":                   [ {"statement": string, "basis": "evidence"|"inference"|"assumption", "sources": string[]} ],
+      "proof_points":           [ {"statement": string, "basis": "evidence"|"inference"|"assumption", "sources": string[]} ],
+      "competitive_advantages": [ {"statement": string, "basis": "evidence"|"inference"|"assumption", "sources": string[]} ]
+    },
+    "win_strategy": {
+      "recommended_discriminators": [ {"statement": string, "basis": string, "sources": string[]} ],
+      "key_themes":                 [ {"statement": string, "basis": string, "sources": string[]} ],
+      "evaluation_priorities":      [ {"statement": string, "basis": string, "sources": string[]} ],
+      "critical_actions":           [ {"action": string, "rationale": string, "priority": "immediate"|"near_term"|"pre_rfp", "owner": string|null} ]
+    },
+    "risks": {
+      "top_capture_risks":  [ {"title": string, "severity": "low"|"medium"|"high"|"critical", "mitigation": string|null, "basis": string, "sources": string[]} ],
+      "top_proposal_risks": [ {"title": string, "severity": string, "mitigation": string|null, "basis": string, "sources": string[]} ],
+      "top_delivery_risks": [ {"title": string, "severity": string, "mitigation": string|null, "basis": string, "sources": string[]} ]
+    },
+    "executive_recommendation": {
+      "recommendation": "pursue_aggressively"|"pursue_with_conditions"|"monitor"|"no_bid",
+      "confidence_level": "high"|"medium"|"low",
+      "confidence_score": number,
+      "rationale": string,
+      "required_conditions": string[]
+    },
+    "historical_evidence": {
+      "similar_opportunities": string[], "historical_win_themes": string[],
+      "historical_risks": string[], "historical_discriminators": string[],
+      "agency_patterns": string[]
+    },
+    "inputs_used": string[],
+    "inputs_missing": string[],
+    "key_findings": string[],
+    "citations": [ {"evidence_ref": "E1", "claim": string} ]
+  }

@@ -513,3 +513,141 @@ export interface ChatMessage {
   model_name: string | null;
   created_at: string;
 }
+
+// ── Executive Briefings & Gate Reviews ───────────────────────────────────
+export interface Confidence {
+  level: "high" | "medium" | "low";
+  score: number;
+  rationale: string;
+}
+
+export interface HistoricalEvidence {
+  similar_opportunities: string[];
+  historical_win_themes: string[];
+  historical_risks: string[];
+  historical_discriminators: string[];
+  agency_patterns: string[];
+}
+
+export interface OpportunitySnapshot {
+  agency: string | null;
+  program: string | null;
+  estimated_value: string | null;
+  contract_vehicle: string | null;
+  due_date: string | null;
+  incumbent: string | null;
+  pursuit_status: string | null;
+  win_confidence: number;
+}
+
+export interface CustomerIntelligence {
+  strategic_priorities: string[];
+  success_metrics: string[];
+  stakeholder_concerns: string[];
+  mission_drivers: string[];
+}
+
+export interface CompanyPosition {
+  strengths: StrategicPoint[];
+  gaps: StrategicPoint[];
+  proof_points: StrategicPoint[];
+  competitive_advantages: StrategicPoint[];
+}
+
+export interface BriefWinStrategy {
+  recommended_discriminators: StrategicPoint[];
+  key_themes: StrategicPoint[];
+  evaluation_priorities: StrategicPoint[];
+  critical_actions: CaptureAction[];
+}
+
+export interface BriefRisk {
+  title: string;
+  severity: "low" | "medium" | "high" | "critical";
+  mitigation?: string | null;
+  basis: StrategicBasis;
+  sources?: string[];
+}
+
+export interface BriefRisks {
+  top_capture_risks: BriefRisk[];
+  top_proposal_risks: BriefRisk[];
+  top_delivery_risks: BriefRisk[];
+}
+
+export type ExecRecommendationType =
+  | "pursue_aggressively"
+  | "pursue_with_conditions"
+  | "monitor"
+  | "no_bid";
+
+export interface ExecRecommendation {
+  recommendation: ExecRecommendationType;
+  confidence_level: "high" | "medium" | "low";
+  confidence_score: number;
+  rationale: string;
+  required_conditions: string[];
+}
+
+export interface ExecutiveBriefOutput {
+  headline: string;
+  opportunity_snapshot: OpportunitySnapshot;
+  customer_intelligence: CustomerIntelligence;
+  company_position: CompanyPosition;
+  win_strategy: BriefWinStrategy;
+  risks: BriefRisks;
+  executive_recommendation: ExecRecommendation;
+  historical_evidence: HistoricalEvidence;
+  inputs_used?: string[];
+  inputs_missing?: string[];
+  key_findings?: string[];
+}
+
+export interface ScoreBlock {
+  score: number;
+  rationale: string;
+  basis: StrategicBasis;
+  drivers: string[];
+  sources?: string[];
+}
+
+export interface GateReviewOutput {
+  headline: string;
+  attractiveness_score: ScoreBlock;
+  competitive_position_score: ScoreBlock;
+  capability_alignment_score: ScoreBlock;
+  risk_score: ScoreBlock;
+  probability_of_win: Confidence;
+  top_reasons_to_pursue: StrategicPoint[];
+  top_reasons_not_to_pursue: StrategicPoint[];
+  decision_recommendation: "pursue" | "pursue_with_conditions" | "no_bid";
+  decision_summary: string;
+  required_executive_actions: CaptureAction[];
+  open_questions: string[];
+  escalations: string[];
+  historical_evidence: HistoricalEvidence;
+  inputs_used?: string[];
+  inputs_missing?: string[];
+  key_findings?: string[];
+}
+
+export interface DecisionFactor {
+  name: string;
+  score: number;
+  rationale: string;
+  evidence: string[];
+  confidence: "high" | "medium" | "low";
+  basis: StrategicBasis;
+}
+
+export interface BidDecisionOutput {
+  recommendation: "bid" | "conditional_bid" | "no_bid";
+  executive_summary: string;
+  confidence: Confidence;
+  factors: DecisionFactor[];
+  decision_drivers: string[];
+  required_next_steps: CaptureAction[];
+  historical_evidence: HistoricalEvidence;
+  inputs_used?: string[];
+  inputs_missing?: string[];
+}

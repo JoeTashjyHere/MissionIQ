@@ -121,6 +121,8 @@ export default function OpportunityBriefingPage({
         />
       </div>
 
+      <BriefingsLauncher opportunityId={opportunityId} />
+
       <WinStrategySnapshotCard
         opportunityId={opportunityId}
         strategy={strategy}
@@ -224,6 +226,55 @@ function Field({
         {value}
       </dd>
     </div>
+  );
+}
+
+function BriefingsLauncher({ opportunityId }: { opportunityId: string }) {
+  const base = `/capture/opportunities/${opportunityId}`;
+  const briefings = [
+    {
+      href: `${base}/executive-brief`,
+      title: "Executive Brief",
+      blurb: "One-screen leadership decision package.",
+    },
+    {
+      href: `${base}/gate-review`,
+      title: "Gate Review",
+      blurb: "Scored bid/no-bid gate-review package.",
+    },
+    {
+      href: `${base}/bid-decision`,
+      title: "Bid / No-Bid Decision",
+      blurb: "Focused executive recommendation.",
+    },
+  ];
+  return (
+    <Card className="mb-6 border-steel-700/40 bg-gradient-to-br from-steel-700/[0.05] to-transparent">
+      <CardHeader
+        eyebrow="Briefings · Leadership deliverables"
+        title="Generate an executive briefing"
+        actions={<StatusPill tone="info">What should we do?</StatusPill>}
+      />
+      <CardBody>
+        <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
+          {briefings.map((b) => (
+            <Link
+              key={b.href}
+              href={b.href}
+              className="group rounded-lg border border-charcoal-200 bg-white px-4 py-3 transition-colors hover:border-steel-700/50 hover:bg-steel-700/[0.04]"
+            >
+              <div className="flex items-center justify-between">
+                <span className="text-[14px] font-semibold text-charcoal-900">
+                  {b.title}
+                </span>
+                <Sparkles className="h-4 w-4 text-steel-700 opacity-0 transition-opacity group-hover:opacity-100" />
+              </div>
+              <p className="mt-1 text-[12.5px] text-charcoal-600">{b.blurb}</p>
+            </Link>
+          ))}
+        </div>
+      </CardBody>
+    </Card>
   );
 }
 

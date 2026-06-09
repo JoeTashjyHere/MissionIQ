@@ -315,7 +315,9 @@ export default function MemoryPage({
         </Card>
       )}
 
-      <SimilarCard similar={memory.similar_opportunities} />
+      <div id="similar" className="scroll-mt-24">
+        <SimilarCard similar={memory.similar_opportunities} />
+      </div>
 
       <div className="grid gap-6 lg:grid-cols-3">
         <ItemListCard
@@ -356,11 +358,13 @@ export default function MemoryPage({
       )}
 
       {memory.agency_intelligence && (
-        <AgencyCard intel={memory.agency_intelligence} />
+        <div id="agency" className="scroll-mt-24">
+          <AgencyCard intel={memory.agency_intelligence} />
+        </div>
       )}
 
       {statEntries.length > 0 && (
-        <Card variant="subtle">
+        <Card variant="subtle" id="graph" className="scroll-mt-24">
           <CardBody>
             <div className="flex items-center gap-2 mb-3">
               <Network className="h-4 w-4 text-charcoal-400" />

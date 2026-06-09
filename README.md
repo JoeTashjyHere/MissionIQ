@@ -201,6 +201,56 @@ Knowledge Graph ──► Memory service ──►  1. Pursuit Memory
 Surfaced read-only on the **Memory** tab (per opportunity) and the
 `GET /opportunities/{id}/memory` + `GET /workspaces/{id}/insights` endpoints.
 
+### Decisions — Executive Briefings & Gate Reviews
+
+Everything above produces *intelligence*. The **Briefings** layer turns that
+intelligence into *leadership decisions* — boardroom-ready packages that answer
+"What should we do?" and "How do we communicate it to leadership?". Each briefing
+synthesizes every upstream output (Customer DNA, Company DNA, Capability Match,
+Evaluation & Risk Intelligence, Win Strategy, market intelligence, and Pursuit
+Memory) and consumes `requires_customer_dna`, `consumes_company_profile`, and
+`consumes_memory`.
+
+```
+All intelligence ──►  Executive Brief   (capture.executive_brief)
+                      Gate Review       (capture.gate_review)
+                      Bid / No-Bid      (capture.bid_decision)
+```
+
+- **Executive Brief** — a one-screen brief: opportunity snapshot, customer
+  intelligence, company position, win strategy, risks (capture/proposal/delivery
+  heat map), and an executive recommendation (Pursue Aggressively · Pursue with
+  Conditions · Monitor · No-Bid) with confidence, rationale, and required
+  conditions.
+- **Gate Review** — a formal gate-review package: 0–100 scores for Opportunity
+  Attractiveness, Competitive Position, Capability Alignment, and Risk; a
+  Probability of Win; top reasons to pursue / not pursue; the decision
+  recommendation; required executive actions; open questions; and escalations.
+- **Bid / No-Bid Decision** — a focused call (Bid · Conditional Bid · No-Bid)
+  scored across the six decision factors (Strategic Alignment, Revenue Potential,
+  Relationship Position, Competitive Position, Delivery Readiness, Risk Profile),
+  each with score, rationale, evidence, and confidence — plus decision drivers
+  and required next steps.
+
+**Epistemic honesty everywhere.** Every analytic statement is tagged
+**Evidence** (what MissionIQ knows), **Inference** (what it believes), or
+**Assumption** (what needs validating), and recalled institutional knowledge is
+surfaced as **Historical Evidence**. The briefing pages are built from a modular,
+slide-mappable design system (`components/briefings`) — KPI banner, confidence
+gauge, recommendation banner, score bars, risk heat map, strength/weakness
+matrix, action tracker, and a historical-evidence panel — so they can later
+export 1:1 to PowerPoint / PDF / Word.
+
+### Platform navigation
+
+The left navigation is organized around platform capabilities (Win · Deliver ·
+Improve), not individual reports: **Capture Intelligence**, **Briefings**,
+**Memory**, **Market Intelligence**, **Platform**, and disabled **Future
+Modules**. Capture / Briefings / Memory items are opportunity-scoped, so they
+deep-link into the currently open opportunity and otherwise route to the
+Opportunities list. Routes are unchanged — only the information architecture was
+reorganized.
+
 ---
 
 ## Architecture Documents
@@ -438,6 +488,8 @@ npm run dev
 ✅ **Seller-side Company Profile** expanded with contract vehicles, technology partners, case studies, key personnel, geographic footprint, security posture, delivery model, and pricing posture (editable on the Company Profile page); downstream modules optionally consume it (`consumes_company_profile`)
 ✅ **Capture: Win Strategy** module (flagship) — gate-review synthesis of Customer DNA, Company DNA, opportunity documents, evaluation criteria, Capability Match, market intelligence, and risks into Executive Pursuit Recommendation, Strengths, Weaknesses, Key Discriminators, Black Hat Assessment, Likely Evaluator Concerns, Win Themes, Competitive Assessment, Critical Capture Actions, and a 0–100 Win Confidence call. Every point is tagged evidence / inference / assumption with cited sources; partial inputs dampen confidence rather than fabricate evidence
 ✅ **Memory & Knowledge Graph** layer — a workspace-scoped institutional graph (Agency · Program · Opportunity · Contract · Competitor · Technology · Capability · Risk · Win Theme · Discriminator · Contract Vehicle · Past Performance) that every module contributes provenance-stamped facts to on success (idempotent ingestion). Powers four reusable capabilities — **Pursuit Memory**, the **Opportunity Similarity Engine**, the **Historical Insight Repository**, and the **Agency Intelligence Repository** — surfaced on the per-opportunity **Memory** tab and consumed by Win Strategy (`consumes_memory`), with every item tagged **Historical Evidence / Current Opportunity / Inference**
+✅ **Briefings: Executive Brief / Gate Review / Bid · No-Bid Decision** modules — leadership decision packages that synthesize every upstream output (Customer DNA, Company DNA, Capability Match, Evaluation & Risk Intelligence, Win Strategy, market intelligence, Pursuit Memory) into a one-screen executive brief, a scored gate-review package, and a focused bid/no-bid call. Every statement is tagged Evidence / Inference / Assumption; recalled intelligence is labeled Historical Evidence; partial inputs dampen confidence. Built on a modular, slide-mappable briefing design system (`components/briefings`) ready for PowerPoint / PDF / Word export
+✅ **Platform navigation** reorganized around capabilities (Win · Deliver · Improve): Capture Intelligence · Briefings · Memory · Market Intelligence · Platform · Future Modules, with opportunity-scoped sections that deep-link into the open pursuit (routes unchanged)
 ✅ **Intelligence Assistant** with hard grounding contract: refuses to call the LLM when no documents are indexed or retrieval returns no hits; every answer carries citations and a status pill
 ✅ SAM.gov market intelligence client + search + import + link-to-opportunity
 ✅ CSV exports (Compliance, Risks) — populated by the structured writeback path
@@ -446,7 +498,7 @@ npm run dev
 ✅ Platform shell with module-aware left nav and stubbed module groups
 ✅ Pages: Login, Signup, Dashboard, Workspaces, Opportunity list/detail, Documents, Module workbenches, Market Intelligence, Assistant
 ✅ Seed script with example opportunity + example documents
-✅ Unit tests for auth, workspace scoping, LLM router, RAG, document status state machine, Opportunity Summary contract, Customer DNA contract, the DNA-prerequisite enforcement for downstream modules, the Company DNA + Capability Match contracts, the seller-data anti-overclaim guarantee, the Win Strategy synthesis contract (basis tagging + partial-input confidence dampening + Pursuit Memory consumption), and the Memory/Knowledge-Graph layer (fact extraction, entity normalization/dedup, similarity scoring, and Historical/Current/Inference basis classification)
+✅ Unit tests for auth, workspace scoping, LLM router, RAG, document status state machine, Opportunity Summary contract, Customer DNA contract, the DNA-prerequisite enforcement for downstream modules, the Company DNA + Capability Match contracts, the seller-data anti-overclaim guarantee, the Win Strategy synthesis contract (basis tagging + partial-input confidence dampening + Pursuit Memory consumption), the Memory/Knowledge-Graph layer (fact extraction, entity normalization/dedup, similarity scoring, and Historical/Current/Inference basis classification), and the Executive Briefings & Gate Reviews contracts (registration/flags, decision-not-summary prompts, schema-valid stub output, Historical Evidence from memory, and partial-input confidence dampening)
 
 📋 Remaining Capture modules (Requirement Breakdown, Win Themes, Staffing Assumptions, Proposal Outline, Market Intel Summary) — each follows the same ~80-line pattern as the modules already shipped.
 

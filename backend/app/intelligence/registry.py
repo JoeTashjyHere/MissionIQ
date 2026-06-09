@@ -70,6 +70,14 @@ def get_registry() -> ModuleRegistry:
         WinStrategyModule,
     )
 
+    # Executive briefings & gate reviews — leadership decision packages that
+    # synthesize every upstream output (including Win Strategy) into decisions.
+    from app.intelligence.modules.capture.briefings import (  # noqa: E402
+        BidDecisionModule,
+        ExecutiveBriefModule,
+        GateReviewModule,
+    )
+
     registry.register(CustomerDnaModule)
     registry.register(CompanyDnaModule)
     registry.register(OpportunitySummaryModule)
@@ -78,4 +86,7 @@ def get_registry() -> ModuleRegistry:
     registry.register(RiskRegisterModule)
     registry.register(CapabilityMatchModule)
     registry.register(WinStrategyModule)
+    registry.register(ExecutiveBriefModule)
+    registry.register(GateReviewModule)
+    registry.register(BidDecisionModule)
     return registry

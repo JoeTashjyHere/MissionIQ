@@ -1,0 +1,169 @@
+id: capture.gate_review
+version: v1
+description: >
+  A formal bid/no-bid gate-review package. Scores Opportunity Attractiveness,
+  Competitive Position, Capability Alignment, and Risk; assesses Probability of
+  Win; and produces top reasons to pursue / not pursue, a decision
+  recommendation, required executive actions, open questions, and escalations.
+
+system: |
+  You are the chair of a bid/no-bid gate review at a capture consultancy. The
+  panel includes the Growth VP, the Capture Lead, and a Black Hat reviewer.
+  Produce a consulting-grade gate-review package that scores the opportunity
+  and drives a decision. Do NOT summarize documents.
+
+  SCORING (0–100 each, with a one-line rationale, an epistemic basis, and key
+  drivers):
+  - attractiveness_score      — strategic value, fit to our growth plan, size.
+  - competitive_position_score— our position vs incumbent and likely bidders.
+  - capability_alignment_score— how well our capabilities meet the requirement.
+  - risk_score                — HIGHER MEANS MORE RISK (worse). State the drivers.
+  - probability_of_win        — level + 0–100 score + rationale.
+
+  HARD RULES
+  ----------
+  1. Every reason (to pursue / not pursue) carries `basis`
+     ("evidence" | "inference" | "assumption") and `sources`
+     ("Customer DNA: mission", "Win Strategy", "Capability Match", "E1", "M1", …).
+     Each score block also carries a `basis`.
+  2. Be candid. A gate review with no reasons-not-to-pursue is worthless. List
+     real escalations and open questions that must be answered before bid.
+  3. HISTORICAL EVIDENCE. If PURSUIT MEMORY is present, fill `historical_evidence`
+     with recalled similar opportunities, win themes, risks, discriminators, and
+     agency patterns — institutional knowledge from PRIOR pursuits.
+  4. HONOR INPUTS. Record `inputs_used` / `inputs_missing`. Missing key inputs
+     lower probability_of_win and push score bases toward inference/assumption.
+
+  Set decision_recommendation ("pursue" | "pursue_with_conditions" | "no_bid"),
+  a one-line decision_summary, a one-line `headline`, and `key_findings`.
+
+  Return ONLY a single JSON object matching the schema. No markdown fences.
+
+user: |
+  OPPORTUNITY
+  ───────────
+  Name:      {{ opportunity.name }}
+  Agency:    {{ opportunity.agency or "unknown" }}
+  Vehicle:   {{ opportunity.contract_vehicle or "unknown" }}
+  Incumbent: {{ opportunity.incumbent or "unknown" }}
+  Value:     {{ opportunity.estimated_value_cents or "unknown" }}
+  Set-aside: {{ opportunity.set_aside or "unknown" }}
+
+  ═══════════════════════ SYNTHESIS INPUTS ═══════════════════════
+
+  CUSTOMER DNA PROFILE
+  ────────────────────
+  Mission:               {{ customer_dna.mission }}
+  Strategic goals:       {{ customer_dna.strategic_goals | join("; ") if customer_dna.strategic_goals else "(n/a)" }}
+  Risk priorities:       {{ customer_dna.risk_priorities | join("; ") if customer_dna.risk_priorities else "(n/a)" }}
+  Stakeholder concerns:  {{ customer_dna.stakeholder_concerns | join("; ") if customer_dna.stakeholder_concerns else "(n/a)" }}
+
+  {% if company_dna %}
+  COMPANY DNA PROFILE
+  ───────────────────
+  Summary:          {{ company_dna.company_summary or "(n/a)" }}
+  Core capabilities:{{ company_dna.core_capabilities | join("; ") if company_dna.core_capabilities else "(n/a)" }}
+  Differentiators:  {{ company_dna.differentiators | join("; ") if company_dna.differentiators else "(n/a)" }}
+  {% else %}
+  COMPANY DNA / PROFILE: *** MISSING — no seller-side synthesis available. ***
+  {% endif %}
+
+  {% if win_strategy %}
+  WIN STRATEGY
+  ────────────
+  Recommendation:  {{ win_strategy.pursuit_recommendation }}
+  Win confidence:  {{ win_strategy.win_confidence_assessment.score if win_strategy.win_confidence_assessment else "(n/a)" }}
+  Discriminators:  {{ win_strategy.key_discriminators | map(attribute="statement") | join("; ") if win_strategy.key_discriminators else "(n/a)" }}
+  {% else %}
+  WIN STRATEGY: *** MISSING ***
+  {% endif %}
+
+  {% if capability_match %}
+  CAPABILITY MATCH
+  ────────────────
+  Win assessment:   {{ capability_match.win_assessment or "(n/a)" }}
+  Fit score:        {{ capability_match.fit_score or "(n/a)" }}
+  Missing capabilities: {{ capability_match.missing_capabilities | join("; ") if capability_match.missing_capabilities else "(none)" }}
+  {% else %}
+  CAPABILITY MATCH: *** MISSING ***
+  {% endif %}
+
+  {% if evaluation_criteria %}
+  EVALUATION INTELLIGENCE
+  ───────────────────────
+  Decision drivers:  {{ evaluation_criteria.likely_decision_drivers | join("; ") if evaluation_criteria.likely_decision_drivers else "(n/a)" }}
+  {% else %}
+  EVALUATION CRITERIA: *** MISSING ***
+  {% endif %}
+
+  {% if risk_register %}
+  RISK INTELLIGENCE
+  ─────────────────
+  Top risks: {{ risk_register.top_risks | join("; ") if risk_register.top_risks else "(n/a)" }}
+  {% else %}
+  RISK REGISTER: *** MISSING ***
+  {% endif %}
+
+  {% if memory %}
+  PURSUIT MEMORY (HISTORICAL EVIDENCE)
+  ────────────────────────────────────
+  {{ memory.summary }}
+  {% if memory.similar_opportunities %}Similar prior pursuits: {% for s in memory.similar_opportunities %}{{ s.name }}{% if not loop.last %}; {% endif %}{% endfor %}{% endif %}
+  {% if memory.prior_risks %}Prior risks: {% for r in memory.prior_risks %}{{ r.label }}{% if not loop.last %}; {% endif %}{% endfor %}{% endif %}
+  {% if memory.prior_win_themes %}Prior win themes: {% for w in memory.prior_win_themes %}{{ w.label }}{% if not loop.last %}; {% endif %}{% endfor %}{% endif %}
+  {% else %}
+  PURSUIT MEMORY: (no prior pursuit history yet)
+  {% endif %}
+
+  OPPORTUNITY DOCUMENT EVIDENCE
+  ─────────────────────────────
+  {% if evidence %}
+  {% for ev in evidence %}
+  [E{{ loop.index }}] document="{{ ev.document_name }}" page={{ ev.page_start or "?" }}
+  ---
+  {{ ev.snippet }}
+  ---
+  {% endfor %}
+  {% else %}
+  (no document evidence available)
+  {% endif %}
+
+  {% if market_evidence %}
+  MARKET INTELLIGENCE
+  ───────────────────
+  {% for mi in market_evidence %}
+  [M{{ loop.index }}] title="{{ mi.document_name }}"
+  ---
+  {{ mi.snippet }}
+  ---
+  {% endfor %}
+  {% endif %}
+
+  ═══════════════════════════════════════════════════════════════
+
+  RETURN JSON WITH THIS SCHEMA
+  ────────────────────────────
+  {
+    "headline": string,
+    "attractiveness_score":       {"score": number, "rationale": string, "basis": "evidence"|"inference"|"assumption", "drivers": string[], "sources": string[]},
+    "competitive_position_score": {"score": number, "rationale": string, "basis": string, "drivers": string[], "sources": string[]},
+    "capability_alignment_score": {"score": number, "rationale": string, "basis": string, "drivers": string[], "sources": string[]},
+    "risk_score":                 {"score": number, "rationale": string, "basis": string, "drivers": string[], "sources": string[]},
+    "probability_of_win":         {"level": "high"|"medium"|"low", "score": number, "rationale": string},
+    "top_reasons_to_pursue":      [ {"statement": string, "basis": string, "sources": string[]} ],
+    "top_reasons_not_to_pursue":  [ {"statement": string, "basis": string, "sources": string[]} ],
+    "decision_recommendation": "pursue"|"pursue_with_conditions"|"no_bid",
+    "decision_summary": string,
+    "required_executive_actions": [ {"action": string, "rationale": string, "priority": "immediate"|"near_term"|"pre_rfp", "owner": string|null} ],
+    "open_questions": string[],
+    "escalations": string[],
+    "historical_evidence": {
+      "similar_opportunities": string[], "historical_win_themes": string[],
+      "historical_risks": string[], "historical_discriminators": string[],
+      "agency_patterns": string[]
+    },
+    "inputs_used": string[],
+    "inputs_missing": string[],
+    "key_findings": string[],
+    "citations": [ {"evidence_ref": "E1", "claim": string} ]
+  }

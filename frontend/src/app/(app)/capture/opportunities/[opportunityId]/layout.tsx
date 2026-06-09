@@ -7,6 +7,9 @@ import clsx from "clsx";
 
 const TABS = [
   { slug: "", label: "Briefing" },
+  { slug: "executive-brief", label: "Executive Brief", emphasis: true },
+  { slug: "gate-review", label: "Gate Review", emphasis: true },
+  { slug: "bid-decision", label: "Bid / No-Bid", emphasis: true },
   { slug: "win-strategy", label: "Win Strategy", emphasis: true },
   { slug: "memory", label: "Memory", emphasis: true },
   { slug: "documents", label: "Documents" },

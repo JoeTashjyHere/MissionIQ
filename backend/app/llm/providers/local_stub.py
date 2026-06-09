@@ -83,6 +83,17 @@ def _build_skeleton(user_prompt: str) -> dict:
     # Order matters only for disambiguation between the DNA producer prompt
     # and a generic "executive_summary" fallback.
 
+    # Briefing modules first — they embed upstream field names as inputs, so we
+    # disambiguate on their own unique schema keys before the win-strategy check.
+    if "opportunity_snapshot" in lower and "executive_recommendation" in lower:
+        return _executive_brief_skeleton(evidence_refs, dna, user_prompt)
+
+    if "attractiveness_score" in lower and "escalations" in lower:
+        return _gate_review_skeleton(evidence_refs, dna, user_prompt)
+
+    if "decision_drivers" in lower and "required_next_steps" in lower:
+        return _bid_decision_skeleton(evidence_refs, dna, user_prompt)
+
     if (
         "executive_pursuit_recommendation" in lower
         and "black_hat_assessment" in lower
@@ -553,6 +564,469 @@ def _win_strategy_skeleton(
         ],
         "citations": [
             {"evidence_ref": ref["ref"], "claim": "Supports win-strategy assessment."}
+            for ref in evidence_refs[:4]
+        ],
+    }
+
+
+# ── Executive Briefings & Gate Reviews ─────────────────────────────────────
+
+
+def _briefing_missing(user_prompt: str) -> dict[str, bool]:
+    return {
+        "company": "no seller-side synthesis available" in user_prompt,
+        "win_strategy": "WIN STRATEGY: *** MISSING" in user_prompt,
+        "capability_match": "CAPABILITY MATCH: *** MISSING" in user_prompt,
+        "evaluation_criteria": "EVALUATION CRITERIA: *** MISSING" in user_prompt,
+        "risk_register": "RISK REGISTER: *** MISSING" in user_prompt,
+    }
+
+
+def _memory_present(user_prompt: str) -> bool:
+    return (
+        "PURSUIT MEMORY" in user_prompt
+        and "no prior pursuit history yet" not in user_prompt
+    )
+
+
+def _briefing_inputs(missing: dict[str, bool]) -> tuple[list[str], list[str]]:
+    used = ["Customer DNA", "Opportunity Documents"]
+    miss: list[str] = []
+    label = {
+        "company": "Company DNA",
+        "win_strategy": "Win Strategy",
+        "capability_match": "Capability Match",
+        "evaluation_criteria": "Evaluation Intelligence",
+        "risk_register": "Risk Intelligence",
+    }
+    for key, name in label.items():
+        (miss if missing[key] else used).append(name)
+    return used, miss
+
+
+def _historical_evidence(present: bool) -> dict:
+    if not present:
+        return {
+            "similar_opportunities": [],
+            "historical_win_themes": [],
+            "historical_risks": [],
+            "historical_discriminators": [],
+            "agency_patterns": [],
+        }
+    return {
+        "similar_opportunities": ["[Stub] Prior DHA Mission Ops Recompete"],
+        "historical_win_themes": ["[Stub] Mission continuity without disruption"],
+        "historical_risks": ["[Stub] Aggressive transition timeline"],
+        "historical_discriminators": ["[Stub] Cleared 24x7 SOC bench"],
+        "agency_patterns": ["[Stub] Agency consistently weights past performance heavily"],
+    }
+
+
+def _executive_brief_skeleton(
+    evidence_refs: list[dict], dna: dict | None, user_prompt: str
+) -> dict:
+    e1 = evidence_refs[0]["ref"] if evidence_refs else "E1"
+    missing = _briefing_missing(user_prompt)
+    used, miss = _briefing_inputs(missing)
+    seller_weak = missing["company"] or missing["capability_match"]
+    mission = (dna or {}).get("mission") if dna else None
+
+    if seller_weak:
+        rec, level, score = "pursue_with_conditions", "low", 42
+        rationale = (
+            "[Stub] The customer need is real and on-mission, but seller-side "
+            "synthesis is incomplete. Complete Company DNA and Capability Match "
+            "before committing B&P."
+        )
+    else:
+        rec, level, score = "pursue_aggressively", "medium", 62
+        rationale = (
+            "[Stub] Strong mission alignment, credible discriminators, and a "
+            "beatable incumbent justify an aggressive pursuit with disciplined "
+            "teaming to close the past-performance gap."
+        )
+
+    sp = lambda s, b, src: {"statement": s, "basis": b, "sources": src}  # noqa: E731
+    return {
+        "headline": (
+            f"[Stub] {('Pursue with conditions' if seller_weak else 'Pursue aggressively')}: "
+            "on-mission, beatable incumbent, gap is past performance."
+        ),
+        "opportunity_snapshot": {
+            "agency": (dna or {}).get("agency"),
+            "program": None,
+            "estimated_value": None,
+            "contract_vehicle": None,
+            "due_date": None,
+            "incumbent": None,
+            "pursuit_status": "pursue" if not seller_weak else "qualify",
+            "win_confidence": score,
+        },
+        "customer_intelligence": {
+            "strategic_priorities": (dna or {}).get("strategic_goals") or [
+                "[Stub] Modernize mission operations",
+            ],
+            "success_metrics": (dna or {}).get("success_metrics") or [
+                "[Stub] Operational uptime and mission readiness",
+            ],
+            "stakeholder_concerns": (dna or {}).get("stakeholder_concerns") or [
+                "[Stub] Transition risk; continuity of operations",
+            ],
+            "mission_drivers": [mission or "[Stub] Mission assurance"],
+        },
+        "company_position": {
+            "strengths": [
+                sp(
+                    "Mature 24x7 mission-operations capability aligned to the core requirement.",
+                    "evidence" if not missing["company"] else "assumption",
+                    ["Company DNA: core_capabilities", e1] if not missing["company"] else [],
+                ),
+            ],
+            "gaps": [
+                sp(
+                    "Thin agency-specific past performance relative to the incumbent.",
+                    "inference" if not missing["capability_match"] else "assumption",
+                    ["Capability Match"] if not missing["capability_match"] else [],
+                ),
+            ],
+            "proof_points": [
+                sp(
+                    "Stood up a 24x7 ops center in 45 days for a comparable customer.",
+                    "evidence" if not missing["company"] else "assumption",
+                    ["Company DNA: case_studies"] if not missing["company"] else [],
+                ),
+            ],
+            "competitive_advantages": [
+                sp(
+                    "SOC-embedded data engineering — operations and analytics under one roof.",
+                    "inference",
+                    ["Company DNA: differentiators"] if not missing["company"] else [],
+                ),
+            ],
+        },
+        "win_strategy": {
+            "recommended_discriminators": [
+                sp(
+                    "Zero-downtime transition backed by a proven 45-day stand-up.",
+                    "inference",
+                    ["Win Strategy"] if not missing["win_strategy"] else [],
+                ),
+            ],
+            "key_themes": [
+                sp(
+                    "Mission continuity without disruption — modernization at low risk.",
+                    "inference",
+                    ["Customer DNA: risk_priorities"],
+                ),
+            ],
+            "evaluation_priorities": [
+                sp(
+                    "Lead with past-performance relevance and transition approach.",
+                    "inference" if not missing["evaluation_criteria"] else "assumption",
+                    ["Evaluation Criteria"] if not missing["evaluation_criteria"] else [],
+                ),
+            ],
+            "critical_actions": [
+                {
+                    "action": "Secure a teaming partner with agency-specific past performance.",
+                    "rationale": "Closes the most exploitable weakness before the incumbent frames it.",
+                    "priority": "immediate",
+                    "owner": "Capture Lead",
+                },
+            ],
+        },
+        "risks": {
+            "top_capture_risks": [
+                {
+                    "title": "Incumbent continuity advantage",
+                    "severity": "high",
+                    "mitigation": "Reframe decision around modernization-at-low-risk.",
+                    "basis": "inference",
+                    "sources": [e1],
+                },
+            ],
+            "top_proposal_risks": [
+                {
+                    "title": "Past-performance relevance gap",
+                    "severity": "high",
+                    "mitigation": "Team for cited, relevant CPARS.",
+                    "basis": "inference" if not missing["capability_match"] else "assumption",
+                    "sources": ["Capability Match"] if not missing["capability_match"] else [],
+                },
+            ],
+            "top_delivery_risks": [
+                {
+                    "title": "Transition timeline compression",
+                    "severity": "medium",
+                    "mitigation": "Pre-stage cleared staff and runbooks.",
+                    "basis": "inference",
+                    "sources": ["Customer DNA: risk_priorities"],
+                },
+            ],
+        },
+        "executive_recommendation": {
+            "recommendation": rec,
+            "confidence_level": level,
+            "confidence_score": score,
+            "rationale": rationale,
+            "required_conditions": (
+                [
+                    "Complete Company DNA and Capability Match.",
+                    "Confirm a teaming partner for agency past performance.",
+                ]
+                if seller_weak
+                else ["Confirm a teaming partner for agency past performance."]
+            ),
+        },
+        "historical_evidence": _historical_evidence(_memory_present(user_prompt)),
+        "inputs_used": used,
+        "inputs_missing": miss,
+        "key_findings": [
+            "[Stub] Winnable as a modernization play; not as a price play.",
+            "[Stub] Teaming for past performance is the highest-leverage move.",
+        ],
+        "citations": [
+            {"evidence_ref": ref["ref"], "claim": "Supports executive brief."}
+            for ref in evidence_refs[:4]
+        ],
+    }
+
+
+def _gate_review_skeleton(
+    evidence_refs: list[dict], dna: dict | None, user_prompt: str
+) -> dict:
+    e1 = evidence_refs[0]["ref"] if evidence_refs else "E1"
+    missing = _briefing_missing(user_prompt)
+    used, miss = _briefing_inputs(missing)
+    seller_weak = missing["company"] or missing["capability_match"]
+
+    base_basis = "inference"
+    align_basis = "evidence" if not missing["company"] else "assumption"
+    pwin = 42 if seller_weak else 60
+    decision = "pursue_with_conditions" if seller_weak else "pursue"
+
+    def score_block(score, rationale, basis, drivers, sources):
+        return {
+            "score": score,
+            "rationale": rationale,
+            "basis": basis,
+            "drivers": drivers,
+            "sources": sources,
+        }
+
+    return {
+        "headline": (
+            "[Stub] Attractive, winnable opportunity gated on closing the "
+            "past-performance gap."
+        ),
+        "attractiveness_score": score_block(
+            72,
+            "On-mission, sized to our growth plan, recurring operations scope.",
+            base_basis,
+            ["Mission alignment", "Recurring revenue"],
+            ["Customer DNA: mission", e1],
+        ),
+        "competitive_position_score": score_block(
+            55 if not seller_weak else 45,
+            "Beatable incumbent on modernization; large prime threatens on scale.",
+            base_basis,
+            ["Incumbent beatable", "Prime scale threat"],
+            ["Win Strategy"] if not missing["win_strategy"] else [],
+        ),
+        "capability_alignment_score": score_block(
+            68 if not missing["company"] else 50,
+            "Mature mission-ops and security align to the core requirement.",
+            align_basis,
+            ["Mission-ops maturity", "Security posture"],
+            ["Company DNA: core_capabilities"] if not missing["company"] else [],
+        ),
+        "risk_score": score_block(
+            58,
+            "Higher = more risk. Incumbent continuity and past-performance gap drive it.",
+            base_basis,
+            ["Incumbent continuity", "Past-performance gap"],
+            ["Risk Register"] if not missing["risk_register"] else [],
+        ),
+        "probability_of_win": {
+            "level": "low" if seller_weak else "medium",
+            "score": pwin,
+            "rationale": (
+                "[Stub] Capability and mission alignment offset by incumbent "
+                "advantage and a past-performance gap."
+                + (" Dampened by missing seller-side inputs." if seller_weak else "")
+            ),
+        },
+        "top_reasons_to_pursue": [
+            {
+                "statement": "Direct mission alignment with a credible path to differentiate.",
+                "basis": base_basis,
+                "sources": ["Customer DNA: mission", e1],
+            },
+            {
+                "statement": "Incumbent is beatable on modernization.",
+                "basis": "inference" if not missing["win_strategy"] else "assumption",
+                "sources": ["Win Strategy"] if not missing["win_strategy"] else [],
+            },
+        ],
+        "top_reasons_not_to_pursue": [
+            {
+                "statement": "Agency-specific past performance is thin versus the incumbent.",
+                "basis": "inference" if not missing["capability_match"] else "assumption",
+                "sources": ["Capability Match"] if not missing["capability_match"] else [],
+            },
+        ],
+        "decision_recommendation": decision,
+        "decision_summary": (
+            "[Stub] Proceed to capture with conditions: secure teaming for past "
+            "performance and validate transition concerns with the customer."
+        ),
+        "required_executive_actions": [
+            {
+                "action": "Approve B&P for capture phase contingent on teaming.",
+                "rationale": "Keeps momentum while de-risking the gap.",
+                "priority": "immediate",
+                "owner": "Growth VP",
+            },
+        ],
+        "open_questions": [
+            "Who is the confirmed teaming partner for agency past performance?",
+            "What is the customer's true risk tolerance on transition timing?",
+        ],
+        "escalations": (
+            ["Seller-side synthesis incomplete — complete Company DNA and Capability Match."]
+            if seller_weak
+            else []
+        ),
+        "historical_evidence": _historical_evidence(_memory_present(user_prompt)),
+        "inputs_used": used,
+        "inputs_missing": miss,
+        "key_findings": [
+            "[Stub] Attractiveness is high; the constraint is competitive proof, not fit.",
+        ],
+        "citations": [
+            {"evidence_ref": ref["ref"], "claim": "Supports gate-review scoring."}
+            for ref in evidence_refs[:4]
+        ],
+    }
+
+
+def _bid_decision_skeleton(
+    evidence_refs: list[dict], dna: dict | None, user_prompt: str
+) -> dict:
+    e1 = evidence_refs[0]["ref"] if evidence_refs else "E1"
+    missing = _briefing_missing(user_prompt)
+    used, miss = _briefing_inputs(missing)
+    seller_weak = missing["company"] or missing["capability_match"]
+
+    rec = "conditional_bid" if seller_weak else "bid"
+    level, score = ("low", 44) if seller_weak else ("medium", 61)
+
+    def factor(name, fscore, rationale, evidence, conf, basis):
+        return {
+            "name": name,
+            "score": fscore,
+            "rationale": rationale,
+            "evidence": evidence,
+            "confidence": conf,
+            "basis": basis,
+        }
+
+    return {
+        "recommendation": rec,
+        "executive_summary": (
+            "[Stub] "
+            + (
+                "Conditional bid. The opportunity is strategically aligned and "
+                "winnable, but seller-side readiness must be confirmed and a "
+                "teaming partner secured before full commitment."
+                if seller_weak
+                else "Bid. Strong strategic alignment and a beatable incumbent "
+                "make this a disciplined, teaming-enabled pursuit worth our B&P."
+            )
+        ),
+        "confidence": {
+            "level": level,
+            "score": score,
+            "rationale": (
+                "[Stub] Aggregated across the six decision factors; constrained "
+                "by competitive proof and "
+                + ("incomplete seller-side inputs." if seller_weak else "past-performance depth.")
+            ),
+        },
+        "factors": [
+            factor(
+                "Strategic Alignment",
+                80,
+                "Squarely on-mission and aligned to our growth plan.",
+                ["Customer DNA: mission", "Customer DNA: strategic_goals"],
+                "high",
+                "inference",
+            ),
+            factor(
+                "Revenue Potential",
+                70,
+                "Sizeable, recurring operations scope.",
+                [e1],
+                "medium",
+                "inference",
+            ),
+            factor(
+                "Relationship Position",
+                45,
+                "Limited recent customer touchpoints; incumbent is entrenched.",
+                [],
+                "low",
+                "assumption",
+            ),
+            factor(
+                "Competitive Position",
+                55 if not missing["win_strategy"] else 45,
+                "Beatable incumbent on modernization; prime threatens on scale.",
+                ["Win Strategy"] if not missing["win_strategy"] else [],
+                "medium" if not missing["win_strategy"] else "low",
+                "inference" if not missing["win_strategy"] else "assumption",
+            ),
+            factor(
+                "Delivery Readiness",
+                68 if not missing["company"] else 48,
+                "Mature mission-ops and security backbone; analytics is developing.",
+                ["Company DNA: core_capabilities"] if not missing["company"] else [],
+                "medium" if not missing["company"] else "low",
+                "evidence" if not missing["company"] else "assumption",
+            ),
+            factor(
+                "Risk Profile",
+                52,
+                "Higher = lower risk. Past-performance gap and transition timing weigh on it.",
+                ["Risk Register"] if not missing["risk_register"] else [],
+                "medium",
+                "inference" if not missing["risk_register"] else "assumption",
+            ),
+        ],
+        "decision_drivers": [
+            "Strategic alignment (strong +)",
+            "Competitive proof / past performance (constraint −)",
+            "Teaming to close the gap (enabler)",
+        ],
+        "required_next_steps": [
+            {
+                "action": "Confirm a teaming partner with agency past performance.",
+                "rationale": "Single highest-leverage move to convert conditional to full bid.",
+                "priority": "immediate",
+                "owner": "Capture Lead",
+            },
+            {
+                "action": "Schedule customer engagements to validate transition concerns.",
+                "rationale": "Converts assumptions into evidence before the bid decision.",
+                "priority": "near_term",
+                "owner": None,
+            },
+        ],
+        "historical_evidence": _historical_evidence(_memory_present(user_prompt)),
+        "inputs_used": used,
+        "inputs_missing": miss,
+        "citations": [
+            {"evidence_ref": ref["ref"], "claim": "Supports bid/no-bid decision."}
             for ref in evidence_refs[:4]
         ],
     }
