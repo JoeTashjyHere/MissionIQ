@@ -80,6 +80,8 @@ async def upload_document(
         blob_key=blob_key,
         sha256=sha256,
         status="uploaded",
+        progress_pct=5,
+        stage_started_at=datetime.now(UTC),
         uploaded_by_user_id=user_id,
         uploaded_at=datetime.now(UTC),
     )

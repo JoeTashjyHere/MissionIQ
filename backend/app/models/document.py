@@ -36,7 +36,16 @@ DOC_TYPES = (
     "other",
 )
 
-DOC_STATUSES = ("uploaded", "extracting", "chunking", "embedding", "ready", "failed")
+DOC_STATUSES = ("uploaded", "parsing", "chunking", "embedding", "ready", "failed")
+
+DOC_STATUS_PROGRESS: dict[str, int] = {
+    "uploaded": 5,
+    "parsing": 25,
+    "chunking": 50,
+    "embedding": 75,
+    "ready": 100,
+    "failed": 100,
+}
 
 
 class Document(UUIDPkMixin, TimestampMixin, Base):
@@ -66,7 +75,10 @@ class Document(UUIDPkMixin, TimestampMixin, Base):
     blob_key: Mapped[str] = mapped_column(String(500), nullable=False)
     sha256: Mapped[str] = mapped_column(String(64), nullable=False)
     page_count: Mapped[int | None] = mapped_column(Integer)
+    chunk_count: Mapped[int | None] = mapped_column(Integer)
     status: Mapped[str] = mapped_column(String(20), nullable=False, default="uploaded")
+    progress_pct: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    stage_started_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     error_message: Mapped[str | None] = mapped_column(Text)
     uploaded_by_user_id: Mapped[uuid.UUID | None] = mapped_column(
         PG_UUID(as_uuid=True), ForeignKey("user.id")

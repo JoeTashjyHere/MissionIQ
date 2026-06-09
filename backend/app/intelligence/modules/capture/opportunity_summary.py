@@ -24,16 +24,17 @@ class OpportunitySummaryModule(BaseIntelligenceModule):
     output_model = OpportunitySummaryOutput
     output_schema_summary = {
         "executive_summary": "string",
-        "mission_need": "string",
-        "scope_summary": "string",
+        "key_findings": "string[]",
+        "supporting_evidence": "[{evidence_ref, finding}]",
+        "recommended_actions": "string[]",
+        "mission_need": "string?",
+        "scope_summary": "string?",
         "key_services": "string[]",
         "deliverables": "string[]",
-        "timeline": "string",
+        "timeline": "string?",
         "risks": "string[]",
         "pursue_indicators": "string[]",
         "no_pursue_indicators": "string[]",
-        "key_findings": "string[]",
-        "recommended_actions": "string[]",
     }
     retrieval_query = (
         "mission scope deliverables timeline period of performance evaluation "

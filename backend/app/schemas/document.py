@@ -23,7 +23,10 @@ class DocumentResponse(ORMModel):
     mime_type: str
     size_bytes: int
     page_count: int | None
+    chunk_count: int | None
     status: str
+    progress_pct: int
+    stage_started_at: datetime | None
     error_message: str | None
     uploaded_at: datetime | None
     processed_at: datetime | None

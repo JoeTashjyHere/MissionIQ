@@ -67,6 +67,60 @@ password: MissionIQ!Demo2026
 
 ---
 
+## Golden Path Demo — Capture Intelligence
+
+The end-to-end demo runs offline against the `local_stub` LLM. With a real
+provider configured the same path produces substantive output.
+
+1. **Sign in** at http://localhost:3000 with the demo credentials above. You
+   land in the **Demo Workspace** with one example opportunity already
+   created.
+2. **Open the example opportunity** ("DHA Mission Operations Support
+   Services") from the Capture Intelligence → Opportunities list. The
+   **Briefing** tab shows the opportunity metadata, KPI summary, and tabs
+   for every Capture module.
+3. **Documents tab** — the seeded `example_rfp.txt` has already moved through
+   `uploaded → parsing → chunking → embedding → ready`. Upload one of your
+   own (PDF, DOCX, or TXT). The row shows:
+   - The current processing stage as a friendly label
+   - A live progress bar that advances 5 → 25 → 50 → 75 → 100
+   - Page and chunk counts once available
+   - A red error pill with the exact error message if processing fails
+   Each transition is written to the **audit log** with stage, model, page,
+   and chunk metadata.
+4. **Opportunity Summary tab** — click **Generate Opportunity Summary**. The
+   output renders four canonical sections:
+   - **Executive Summary** — the bottom line in 2–4 sentences
+   - **Key Findings** — discrete evidence-backed observations
+   - **Supporting Evidence** — each finding mapped to its source citation
+   - **Recommended Actions** — concrete next moves for the capture team
+   Every citation is clickable. Hover any `[1]` chip to see the document
+   name, page, section, and snippet. If you delete all documents and
+   regenerate, the module returns an `insufficient_context` status with an
+   amber callout asking you to upload more material — it will not invent
+   findings.
+5. **Intelligence Assistant tab** — start a thread. Try one of the suggested
+   questions ("What are the key evaluation drivers?"). Each answer:
+   - Carries a **Grounded** / **Insufficient context** status pill
+   - Lists source citations as `[1] [2] …` chips with hover previews
+   - Shows which model produced it
+   If you ask before any document is `ready`, the Assistant refuses *before*
+   calling the LLM and tells you exactly what to upload. The refusal is
+   itself audit-logged as `chat.message.refused`.
+6. **Audit trail** — every user-visible action above produces an `audit_log`
+   row (`document.uploaded`, `document.processing.parsing/chunking/
+   embedding/ready/failed`, `ai.module.run`, `chat.message.received`,
+   `chat.message.sent`, `chat.message.refused`). Query it directly:
+
+   ```sql
+   SELECT created_at, action, target_type, meta
+   FROM audit_log
+   ORDER BY created_at DESC
+   LIMIT 25;
+   ```
+
+---
+
 ## Local Development (without Docker)
 
 ### Prerequisites
@@ -118,10 +172,11 @@ npm run dev
 ✅ Workspaces + TeamMember + Company Profile + Capabilities
 ✅ Local BlobStore (S3 interface stubbed)
 ✅ LLM provider abstraction (OpenAI, Anthropic, Bedrock, Azure OpenAI, local_stub)
-✅ Document upload + extraction (PDF / DOCX / TXT) + chunking + embeddings
-✅ RAG retrieval engine with citations
+✅ Document upload + extraction (PDF / DOCX / TXT) + chunking + embeddings, with live per-stage progress (`uploaded → parsing → chunking → embedding → ready / failed`) and audit log entries on every transition
+✅ RAG retrieval engine with source-cited citations
 ✅ Module registry + `BaseIntelligenceModule`
-✅ **Capture: Opportunity Summary** module wired end-to-end as the reference pattern
+✅ **Capture: Opportunity Summary** module wired end-to-end as the reference pattern (Executive Summary · Key Findings · Supporting Evidence · Recommended Actions)
+✅ **Intelligence Assistant** with hard grounding contract: refuses to call the LLM when no documents are indexed or retrieval returns no hits; every answer carries citations and a status pill
 ✅ SAM.gov market intelligence client + search + import + link-to-opportunity
 ✅ CSV exports (Compliance, Risks) — endpoints live, populated once those modules run
 ✅ AuditLog

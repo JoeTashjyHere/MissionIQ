@@ -2,14 +2,17 @@
 
 import { use, useEffect, useRef, useState } from "react";
 import { apiRequest, getAccessToken } from "@/lib/api";
-import type { DocumentRecord } from "@/lib/types";
+import type { DocumentRecord, DocumentStatus } from "@/lib/types";
 import { PageHeader } from "@/components/PageHeader";
 import { Card, CardBody, CardHeader } from "@/components/ds/Card";
 import { DataTable } from "@/components/ds/DataTable";
 import { StatusPill } from "@/components/ds/StatusPill";
 import { Select } from "@/components/ds/Select";
 import { Skeleton } from "@/components/ds/Skeleton";
+import { ProgressBar } from "@/components/ds/ProgressBar";
+import { EmptyState } from "@/components/ds/EmptyState";
 import { formatDateTime } from "@/lib/format";
+import { FileText, UploadCloud } from "lucide-react";
 
 const DOC_TYPES = [
   "rfp",
@@ -27,13 +30,34 @@ const DOC_TYPES = [
   "other",
 ];
 
-function statusTone(s: string): "green" | "amber" | "red" | "neutral" {
+const STATUS_LABEL: Record<DocumentStatus, string> = {
+  uploaded: "Queued",
+  parsing: "Parsing",
+  chunking: "Chunking",
+  embedding: "Embedding",
+  ready: "Ready",
+  failed: "Failed",
+};
+
+const STATUS_HELP: Record<DocumentStatus, string> = {
+  uploaded: "Queued for processing.",
+  parsing: "Extracting text and detecting structure.",
+  chunking: "Segmenting into evidence-grade chunks.",
+  embedding: "Generating embeddings for retrieval.",
+  ready: "Indexed and available for analysis.",
+  failed: "Processing failed. See error and re-upload.",
+};
+
+function statusTone(s: DocumentStatus): "green" | "amber" | "red" | "neutral" {
   if (s === "ready") return "green";
   if (s === "failed") return "red";
-  if (s === "uploaded" || s === "extracting" || s === "chunking" || s === "embedding") {
-    return "amber";
-  }
-  return "neutral";
+  return "amber";
+}
+
+function progressTone(s: DocumentStatus): "steel" | "green" | "amber" | "red" {
+  if (s === "ready") return "green";
+  if (s === "failed") return "red";
+  return "steel";
 }
 
 export default function DocumentsPage({
@@ -45,6 +69,7 @@ export default function DocumentsPage({
   const [docs, setDocs] = useState<DocumentRecord[] | null>(null);
   const [docType, setDocType] = useState("rfp");
   const [uploading, setUploading] = useState(false);
+  const [uploadError, setUploadError] = useState<string | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
 
   const refresh = async () => {
@@ -58,7 +83,7 @@ export default function DocumentsPage({
     refresh().catch(() => setDocs([]));
     const t = setInterval(() => {
       refresh().catch(() => undefined);
-    }, 4000);
+    }, 2500);
     return () => clearInterval(t);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [opportunityId]);
@@ -67,6 +92,7 @@ export default function DocumentsPage({
     const file = e.target.files?.[0];
     if (!file) return;
     setUploading(true);
+    setUploadError(null);
     try {
       const fd = new FormData();
       fd.append("file", file);
@@ -81,24 +107,37 @@ export default function DocumentsPage({
         },
       );
       if (!resp.ok) {
-        const text = await resp.text();
-        throw new Error(text);
+        let detail = `Upload failed (HTTP ${resp.status})`;
+        try {
+          const body = await resp.json();
+          detail = body?.detail ?? body?.title ?? detail;
+        } catch {
+          /* ignore */
+        }
+        throw new Error(detail);
       }
       await refresh();
     } catch (err) {
-      console.error(err);
+      setUploadError(err instanceof Error ? err.message : "Upload failed.");
     } finally {
       setUploading(false);
       if (fileRef.current) fileRef.current.value = "";
     }
   };
 
+  const hasDocs = (docs?.length ?? 0) > 0;
+  const readyCount = (docs ?? []).filter((d) => d.status === "ready").length;
+  const processingCount = (docs ?? []).filter(
+    (d) => d.status !== "ready" && d.status !== "failed",
+  ).length;
+  const failedCount = (docs ?? []).filter((d) => d.status === "failed").length;
+
   return (
     <div>
       <PageHeader
         eyebrow="Capture Intelligence · Documents"
         title="Opportunity documents"
-        subtitle="Upload RFPs, PWS/SOW/SOO, evaluation criteria, capture notes, and supporting docs."
+        subtitle="Upload RFPs, PWS/SOW/SOO, evaluation criteria, capture notes, and supporting docs. MissionIQ parses, chunks, and indexes each document so the Assistant and intelligence modules can ground answers in your sources."
       />
 
       <Card className="mb-6">
@@ -121,16 +160,39 @@ export default function DocumentsPage({
             <input
               ref={fileRef}
               type="file"
-              accept=".pdf,.docx,.txt"
+              accept=".pdf,.docx,.txt,.md"
               onChange={onUpload}
+              disabled={uploading}
               className="block text-[13px] text-charcoal-700
                 file:mr-3 file:px-4 file:py-2 file:rounded-[6px] file:border-0
-                file:bg-steel-700 file:text-white file:font-medium file:cursor-pointer"
+                file:bg-steel-700 file:text-white file:font-medium file:cursor-pointer
+                disabled:opacity-60"
             />
             {uploading && (
               <span className="text-[13px] text-charcoal-500">Uploading…</span>
             )}
           </div>
+          {uploadError && (
+            <div className="mt-3 rounded-md bg-status-redBg border border-status-red/30 text-status-red text-[13px] px-3 py-2">
+              {uploadError}
+            </div>
+          )}
+          {hasDocs && (
+            <div className="mt-4 flex flex-wrap gap-4 text-[12px] text-charcoal-500">
+              <span>
+                <span className="font-medium text-status-green">{readyCount}</span> ready
+              </span>
+              <span>
+                <span className="font-medium text-status-amber">{processingCount}</span>{" "}
+                processing
+              </span>
+              {failedCount > 0 && (
+                <span>
+                  <span className="font-medium text-status-red">{failedCount}</span> failed
+                </span>
+              )}
+            </div>
+          )}
         </CardBody>
       </Card>
 
@@ -139,27 +201,80 @@ export default function DocumentsPage({
         <CardBody className="!p-0">
           {docs === null ? (
             <div className="p-6 flex flex-col gap-2">
-              {[0, 1].map((i) => (
-                <Skeleton key={i} className="h-10 w-full" />
+              {[0, 1, 2].map((i) => (
+                <Skeleton key={i} className="h-12 w-full" />
               ))}
             </div>
+          ) : docs.length === 0 ? (
+            <EmptyState
+              icon={<UploadCloud />}
+              title="No documents yet"
+              description="Upload an RFP, PWS, SOW, or Sections L & M to start producing source-cited capture intelligence."
+            />
           ) : (
             <DataTable
               columns={[
-                { key: "name", header: "Name", render: (d) => <span className="font-medium">{d.name}</span> },
-                { key: "type", header: "Type", render: (d) => d.doc_type },
-                { key: "pages", header: "Pages", align: "right", render: (d) => d.page_count ?? "—" },
                 {
-                  key: "size",
-                  header: "Size",
+                  key: "name",
+                  header: "Name",
+                  render: (d) => (
+                    <div className="flex items-start gap-2">
+                      <FileText
+                        className="mt-0.5 h-4 w-4 text-charcoal-500 shrink-0"
+                        aria-hidden
+                      />
+                      <div className="min-w-0">
+                        <div className="font-medium text-charcoal-900 truncate">
+                          {d.name}
+                        </div>
+                        <div className="text-[11px] text-charcoal-500">
+                          {d.doc_type} · {(d.size_bytes / 1024).toFixed(1)} KB
+                        </div>
+                      </div>
+                    </div>
+                  ),
+                },
+                {
+                  key: "pages",
+                  header: "Pages",
                   align: "right",
-                  render: (d) => `${(d.size_bytes / 1024).toFixed(1)} KB`,
+                  render: (d) => d.page_count ?? "—",
+                },
+                {
+                  key: "chunks",
+                  header: "Chunks",
+                  align: "right",
+                  render: (d) => d.chunk_count ?? "—",
                 },
                 {
                   key: "status",
-                  header: "Status",
+                  header: "Processing",
                   render: (d) => (
-                    <StatusPill tone={statusTone(d.status)}>{d.status}</StatusPill>
+                    <div className="min-w-[180px]">
+                      <div className="flex items-center gap-2">
+                        <StatusPill tone={statusTone(d.status)}>
+                          {STATUS_LABEL[d.status]}
+                        </StatusPill>
+                        <span className="text-[11px] text-charcoal-500">
+                          {d.progress_pct}%
+                        </span>
+                      </div>
+                      <div className="mt-1.5">
+                        <ProgressBar
+                          value={d.progress_pct}
+                          tone={progressTone(d.status)}
+                          ariaLabel={`${d.name} processing progress`}
+                        />
+                      </div>
+                      <div className="mt-1 text-[11px] text-charcoal-500">
+                        {STATUS_HELP[d.status]}
+                      </div>
+                      {d.status === "failed" && d.error_message && (
+                        <div className="mt-1 text-[11px] text-status-red truncate">
+                          {d.error_message}
+                        </div>
+                      )}
+                    </div>
                   ),
                 },
                 {
@@ -169,14 +284,6 @@ export default function DocumentsPage({
                 },
               ]}
               rows={docs}
-              emptyState={
-                <div className="p-10 text-center text-charcoal-500">
-                  <div className="text-h3 text-charcoal-900">No documents yet</div>
-                  <p className="mt-1 text-[14px]">
-                    Upload an RFP, PWS, or capture note to start producing intelligence.
-                  </p>
-                </div>
-              }
             />
           )}
         </CardBody>

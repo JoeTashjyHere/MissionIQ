@@ -176,7 +176,10 @@ def upgrade() -> None:
         sa.Column("blob_key", sa.String(500), nullable=False),
         sa.Column("sha256", sa.String(64), nullable=False),
         sa.Column("page_count", sa.Integer()),
+        sa.Column("chunk_count", sa.Integer()),
         sa.Column("status", sa.String(20), nullable=False, server_default="uploaded"),
+        sa.Column("progress_pct", sa.Integer(), nullable=False, server_default="0"),
+        sa.Column("stage_started_at", sa.DateTime(timezone=True)),
         sa.Column("error_message", sa.Text()),
         sa.Column(
             "uploaded_by_user_id",
@@ -196,7 +199,7 @@ def upgrade() -> None:
             name="ck_document_type",
         ),
         sa.CheckConstraint(
-            "status IN ('uploaded','extracting','chunking','embedding','ready','failed')",
+            "status IN ('uploaded','parsing','chunking','embedding','ready','failed')",
             name="ck_document_status",
         ),
     )

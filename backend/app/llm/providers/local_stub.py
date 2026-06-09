@@ -61,27 +61,155 @@ class LocalStubLLM:
 
 
 def _build_skeleton(user_prompt: str) -> dict:
-    """Heuristic placeholder skeleton tailored to the prompt id mentioned in the prompt body."""
+    """Heuristic placeholder skeleton tailored to the prompt id mentioned in the prompt body.
+
+    For the Opportunity Summary prompt, we look for the EVIDENCE block and
+    surface the actual document name, page numbers, and snippets so the demo
+    feels grounded even without a real LLM. Citations are emitted in the exact
+    ``E{n}`` format the prompt advertises.
+    """
     lower = user_prompt.lower()
-    if "opportunity_summary" in lower or "opportunity summary" in lower:
+    evidence_refs = _parse_evidence_refs(user_prompt)
+    has_evidence = bool(evidence_refs)
+
+    if (
+        "opportunity_summary" in lower
+        or "opportunity summary" in lower
+        or "executive_summary" in lower
+        or "executive summary" in lower
+    ):
+        if not has_evidence:
+            return {
+                "executive_summary": (
+                    "Insufficient context to produce a confident briefing. "
+                    "Upload an RFP, PWS, or Sections L & M to enable analysis."
+                ),
+                "key_findings": [],
+                "supporting_evidence": [],
+                "recommended_actions": [
+                    "Upload the RFP and PWS for this opportunity.",
+                    "Upload Sections L & M (Instructions to Offerors and Evaluation Factors).",
+                    "Add any past performance documents or capture notes already gathered.",
+                ],
+                "mission_need": None,
+                "scope_summary": None,
+                "key_services": [],
+                "deliverables": [],
+                "timeline": None,
+                "risks": [],
+                "pursue_indicators": [],
+                "no_pursue_indicators": [],
+                "citations": [],
+            }
+
+        first_ref = evidence_refs[0]
         return {
             "executive_summary": (
-                "[Stub output] Insufficient real-model context. This is a deterministic "
-                "placeholder demonstrating the end-to-end pipeline."
+                f"[Stub] Source-grounded briefing derived from {len(evidence_refs)} "
+                f"evidence chunk(s) including {first_ref['document_name']} "
+                f"(page {first_ref['page'] or '?'}). Real model output requires "
+                "OPENAI_API_KEY or ANTHROPIC_API_KEY."
             ),
-            "mission_need": "[Stub] Mission need extracted from uploaded documents.",
-            "scope_summary": "[Stub] Scope summary placeholder.",
+            "key_findings": [
+                f"Evidence {ref['ref']} from {ref['document_name']} "
+                f"page {ref['page'] or '?'} discusses: "
+                f"{ref['snippet'][:140]}…"
+                for ref in evidence_refs[:5]
+            ],
+            "supporting_evidence": [
+                {
+                    "evidence_ref": ref["ref"],
+                    "finding": f"{ref['document_name']} p.{ref['page'] or '?'}",
+                }
+                for ref in evidence_refs[:5]
+            ],
+            "recommended_actions": [
+                "Review the cited evidence with the capture lead.",
+                "Compare requirements against Compliance Matrix (when available).",
+                "Schedule a pursue/no-pursue decision review.",
+            ],
+            "mission_need": f"[Stub] Synthesized from evidence in {first_ref['document_name']}.",
+            "scope_summary": "[Stub] Scope inferred from uploaded documents.",
             "key_services": ["[Stub] Service 1", "[Stub] Service 2"],
             "deliverables": ["[Stub] Deliverable 1"],
             "timeline": "[Stub] Period of performance and milestones.",
             "risks": ["[Stub] Risk 1"],
             "pursue_indicators": ["[Stub] Indicator 1"],
             "no_pursue_indicators": [],
-            "key_findings": ["[Stub] Finding 1"],
-            "recommended_actions": ["[Stub] Action 1"],
-            "citations": [],
+            "citations": [
+                {
+                    "evidence_ref": ref["ref"],
+                    "claim": f"Supports finding sourced from {ref['document_name']}.",
+                }
+                for ref in evidence_refs[:5]
+            ],
         }
+
+    # Assistant-style Q&A skeleton
+    if "question" in lower and "evidence" in lower:
+        if not has_evidence:
+            return {
+                "status": "insufficient_context",
+                "answer": (
+                    "I don't have enough source material to answer this confidently. "
+                    "Upload the relevant opportunity documents (RFP, PWS, Sections L & M) "
+                    "and ask again."
+                ),
+                "citations": [],
+                "follow_ups": [
+                    "What documents do you have available to upload?",
+                    "Should we link related SAM.gov notices first?",
+                ],
+            }
+        return {
+            "status": "ok",
+            "answer": (
+                f"[Stub] Based on {len(evidence_refs)} evidence chunk(s), the most "
+                f"relevant material is {evidence_refs[0]['document_name']} "
+                f"(page {evidence_refs[0]['page'] or '?'}). Configure a real LLM "
+                "provider for a substantive analyst response."
+            ),
+            "citations": [{"evidence_ref": ref["ref"]} for ref in evidence_refs[:5]],
+            "follow_ups": [
+                "Ask about specific Section L requirements.",
+                "Ask about evaluation factors in Section M.",
+                "Ask about transition or staffing assumptions.",
+            ],
+        }
+
     return {"_unknown_prompt": True, "raw_user_prompt_hash": _hash(user_prompt)}
+
+
+def _parse_evidence_refs(user_prompt: str) -> list[dict]:
+    """Best-effort scrape of the [Ek]/[Mk] evidence block in the prompt.
+
+    Returns up to 5 entries with ``ref``, ``document_name``, ``page``, ``snippet``.
+    """
+    import re
+
+    refs: list[dict] = []
+    pattern = re.compile(
+        r"\[([EM]\d+)\]\s*(?:\([^)]*\)\s*)?(?:document=|title=)\"?([^\"\n]*)\"?[^\n]*?(?:page=(\d+|\?))?",
+        re.IGNORECASE,
+    )
+    for m in pattern.finditer(user_prompt):
+        ref, doc_name, page = m.group(1), m.group(2).strip(), m.group(3)
+        start = m.end()
+        end = user_prompt.find("---", start)
+        snippet = user_prompt[start:end].strip() if end != -1 else ""
+        if snippet.startswith("---"):
+            snippet = snippet[3:].strip()
+        refs.append(
+            {
+                "ref": ref,
+                "document_name": doc_name or "(unknown source)",
+                "page": page if page and page != "?" else None,
+                "snippet": snippet[:400],
+            }
+        )
+        if len(refs) >= 8:
+            break
+    return refs
 
 
 def _hash(s: str) -> str:

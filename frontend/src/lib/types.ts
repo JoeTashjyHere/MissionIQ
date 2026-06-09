@@ -73,6 +73,14 @@ export interface OpportunityOverview {
   last_ai_generation_at: string | null;
 }
 
+export type DocumentStatus =
+  | "uploaded"
+  | "parsing"
+  | "chunking"
+  | "embedding"
+  | "ready"
+  | "failed";
+
 export interface DocumentRecord {
   id: Uuid;
   workspace_id: Uuid;
@@ -82,13 +90,10 @@ export interface DocumentRecord {
   mime_type: string;
   size_bytes: number;
   page_count: number | null;
-  status:
-    | "uploaded"
-    | "extracting"
-    | "chunking"
-    | "embedding"
-    | "ready"
-    | "failed";
+  chunk_count: number | null;
+  status: DocumentStatus;
+  progress_pct: number;
+  stage_started_at: string | null;
   error_message: string | null;
   uploaded_at: string | null;
   processed_at: string | null;
