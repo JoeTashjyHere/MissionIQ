@@ -5,6 +5,7 @@ import Link from "next/link";
 import { apiRequest } from "@/lib/api";
 import type {
   AIOutput,
+  CapabilityMatchOutput,
   CustomerDnaProfile,
   OpportunityOverview,
 } from "@/lib/types";
@@ -31,6 +32,7 @@ export default function OpportunityBriefingPage({
   const { opportunityId } = use(params);
   const [overview, setOverview] = useState<OpportunityOverview | null>(null);
   const [dna, setDna] = useState<AIOutput | null | undefined>(undefined);
+  const [match, setMatch] = useState<AIOutput | null | undefined>(undefined);
 
   useEffect(() => {
     apiRequest<OpportunityOverview>(`/opportunities/${opportunityId}/overview`)
@@ -41,6 +43,11 @@ export default function OpportunityBriefingPage({
     )
       .then((r) => setDna(r ?? null))
       .catch(() => setDna(null));
+    apiRequest<AIOutput | null>(
+      `/opportunities/${opportunityId}/modules/capture.capability_match/latest`,
+    )
+      .then((r) => setMatch(r ?? null))
+      .catch(() => setMatch(null));
   }, [opportunityId]);
 
   if (!overview) {
@@ -106,6 +113,10 @@ export default function OpportunityBriefingPage({
       </div>
 
       <DnaSnapshotCard opportunityId={opportunityId} dna={dna} />
+      <CapabilityMatchSnapshotCard
+        opportunityId={opportunityId}
+        match={match}
+      />
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <Card className="lg:col-span-2">
@@ -290,6 +301,99 @@ function DnaSnapshotCard({
               }
             >
               Confidence: {o.confidence}
+            </StatusPill>
+          </div>
+        )}
+      </CardBody>
+    </Card>
+  );
+}
+
+function CapabilityMatchSnapshotCard({
+  opportunityId,
+  match,
+}: {
+  opportunityId: string;
+  match: AIOutput | null | undefined;
+}) {
+  const href = `/capture/opportunities/${opportunityId}/capabilities`;
+
+  if (match === undefined) {
+    return (
+      <div className="mb-6">
+        <Skeleton className="h-24" />
+      </div>
+    );
+  }
+
+  if (match === null || match.status !== "ok") {
+    return (
+      <Card className="mb-6 border-steel-700/30">
+        <CardBody>
+          <div className="flex items-start gap-4">
+            <div className="rounded-md bg-steel-700/10 text-steel-700 p-2">
+              <Sparkles className="h-5 w-5" />
+            </div>
+            <div className="flex-1">
+              <div className="miq-eyebrow">Seller-side · Fit assessment</div>
+              <h3 className="text-h3 text-charcoal-900 mt-1">
+                Can we credibly win and deliver?
+              </h3>
+              <p className="text-[13.5px] text-charcoal-700 mt-1 max-w-2xl">
+                Capability Match compares your Company Profile against the
+                Customer DNA, requirements, evaluation criteria, and market
+                intelligence to surface strong/weak fit, gaps, proof points,
+                teaming, discriminators, win themes, and company-gap risks.
+              </p>
+            </div>
+            <Link href={href}>
+              <Button>Run Capability Match</Button>
+            </Link>
+          </div>
+        </CardBody>
+      </Card>
+    );
+  }
+
+  const o = match.output_json as unknown as CapabilityMatchOutput;
+  const fitTone =
+    o.fit_score === "strong"
+      ? "green"
+      : o.fit_score === "moderate"
+        ? "amber"
+        : "red";
+  return (
+    <Card className="mb-6">
+      <CardHeader
+        eyebrow="Capability Match · Fit assessment"
+        title="Can we credibly win and deliver?"
+        actions={
+          <Link href={href}>
+            <Button size="sm" variant="secondary">
+              Open full assessment
+            </Button>
+          </Link>
+        }
+      />
+      <CardBody>
+        <div className="flex items-start gap-3">
+          <p className="flex-1 text-[14.5px] text-charcoal-900 leading-relaxed">
+            {o.win_assessment || "—"}
+          </p>
+          <StatusPill tone={fitTone}>Fit: {o.fit_score ?? "—"}</StatusPill>
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">
+          <DnaColumn
+            label="Strong fit"
+            items={(o.strong_fit_areas ?? []).map((f) => f.area)}
+          />
+          <DnaColumn label="Missing capabilities" items={o.missing_capabilities} />
+          <DnaColumn label="Win themes" items={o.reusable_win_themes} />
+        </div>
+        {o.seller_data_complete === false && (
+          <div className="mt-4">
+            <StatusPill tone="amber">
+              Seller data incomplete — claims are assumptions
             </StatusPill>
           </div>
         )}

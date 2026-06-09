@@ -69,6 +69,45 @@ Customer Profile       ┘      │  • Core Values            │  ──► (
 This is what makes MissionIQ outputs read like a senior capture manager
 or management consultant produced them, rather than an AI summarizer.
 
+### Both sides of the deal — Customer DNA × Company DNA
+
+Customer DNA captures **who the customer is**. The seller-side layer captures
+**who *we* are and whether we can credibly win and deliver**.
+
+```
+Company Profile ┐
+ • Core capabilities          ┌─────────────────────┐
+ • Past performance           │   Company DNA       │
+ • Contract vehicles      ──► │  (seller portrait)  │ ─┐
+ • Certifications / partners   └─────────────────────┘  │
+ • Differentiators / footprint                          │   ┌──────────────────┐
+ • Security / delivery / pricing                         ├─► │ Capability Match │
+                                                         │   │  • Strong/weak   │
+Customer DNA ────────────────────────────────────────── ┤   │  • Gaps / proof  │
+Opportunity requirements (RAG) ───────────────────────── ┤   │  • Teaming       │
+Evaluation criteria (prior module output) ────────────── ┤   │  • Discriminators│
+Market intelligence (RAG) ────────────────────────────── ┘   │  • Win themes    │
+                                                              │  • Capture Qs    │
+                                                              │  • Gap risks     │
+                                                              └──────────────────┘
+```
+
+**Seller-side guarantees:**
+
+- **Company Profile is the seller source of truth** (workspace-level, edited on
+  the Company Profile page). Company DNA synthesizes it; Capability Match
+  consumes it.
+- **Capability Match never overclaims.** When the Company Profile is empty or
+  thin, it sets `seller_data_complete = false`, caps `fit_score` at
+  `moderate`, prefixes fit claims with `[Assumption — Company Profile
+  incomplete]`, and links the user to complete the profile. A capture lead is
+  never misled into thinking a fit verdict was grounded in real company data.
+- **Company Profile is optional for downstream modules.** Compliance,
+  Evaluation, and Risk set `consumes_company_profile = True`: they still run on
+  Customer DNA alone, but when seller data is present they sharpen
+  discriminators / seller-gap risks, and when it is absent they label
+  seller-side notes as assumptions.
+
 ---
 
 ## Architecture Documents
@@ -175,13 +214,32 @@ provider configured the same path produces substantive output.
    - **Customer Risks** — threats to the customer's mission or reputation
    Every risk includes Mission Impact, Probability, Severity, Mitigation,
    and Supporting Evidence (E#/M# back to source).
-9. **Intelligence Assistant tab** — start a thread. Try one of the suggested
+9. **Company Profile + Company DNA** — open **Settings → Company Profile** and
+   review the seeded seller-side data (capabilities, past performance,
+   contract vehicles, certifications, technology partners, differentiators,
+   case studies, key personnel, footprint, security posture, delivery model,
+   pricing posture). Back on the opportunity, open the **Company DNA** tab and
+   click **Generate Company DNA Profile** — the seller-side mirror of Customer
+   DNA, synthesized from the Company Profile (no opportunity documents
+   required). Clear the profile and regenerate to see it report
+   `profile_completeness = "empty"` with a CTA to complete the profile.
+10. **Capability Match tab** — click **Generate Capability Match**. This is the
+    senior-capture-lead fit assessment. It compares Customer DNA, opportunity
+    requirements, evaluation criteria, market intelligence, and the Company
+    Profile, and returns the candid **"can we credibly win and deliver?"**
+    verdict plus strong/weak fit areas, missing capabilities, required proof
+    points, recommended teaming partners, suggested discriminators, reusable
+    win themes, capture questions, and proposal risks tied to company gaps.
+    The verdict also surfaces as a card on the **Briefing** tab. With an empty
+    Company Profile it still runs on Customer DNA, but flags
+    `seller_data_complete = false` and labels every fit claim as an assumption.
+11. **Intelligence Assistant tab** — start a thread. Try one of the suggested
    questions. Each answer carries a **Grounded** / **Insufficient context**
    status pill, lists source citations as `[1] [2] …` chips, and shows
    which model produced it. If you ask before any document is `ready`,
-   the Assistant refuses *before* calling the LLM. The refusal is
-   audit-logged as `chat.message.refused`.
-10. **Audit trail** — every user-visible action above produces an
+    the Assistant refuses *before* calling the LLM. The refusal is
+    audit-logged as `chat.message.refused`.
+12. **Audit trail** — every user-visible action above produces an
     `audit_log` row (`document.uploaded`,
     `document.processing.parsing/chunking/embedding/ready/failed`,
     `ai.module.run`, `chat.message.received`, `chat.message.sent`,
@@ -255,6 +313,9 @@ npm run dev
 ✅ **Capture: Compliance Matrix** module — DNA-aware columns: Why Requirement Exists · Mission Alignment · Customer Priority, with structured writeback to `compliance_requirement`
 ✅ **Capture: Evaluation Criteria** module — Section M decomposition plus Evaluation Intelligence (Likely Decision Drivers · Potential Discriminators · Potential Weaknesses · Strategic Recommendations), persisted to `evaluation_criterion`
 ✅ **Capture: Risk Register** module — four-lane taxonomy (Capture · Proposal · Delivery · Customer) with Mission Impact · Probability · Severity · Mitigation · Supporting Evidence per risk, persisted to `risk`
+✅ **Capture: Company DNA Profile** module — the seller-side mirror of Customer DNA (Core Capabilities · Past Performance · Contract Vehicles · Certifications · Technology Partners · Differentiators · Case Studies · Key Personnel · Footprint · Security Posture · Delivery Model · Pricing Posture), synthesized from the workspace Company Profile without requiring opportunity documents
+✅ **Capture: Capability Match** module — senior-capture-lead fit assessment comparing Customer DNA × opportunity requirements × evaluation criteria × market intelligence × Company Profile, producing strong/weak fit, missing capabilities, required proof points, teaming recommendations, discriminators, win themes, capture questions, and company-gap proposal risks; refuses to overclaim when seller data is incomplete (`seller_data_complete = false`)
+✅ **Seller-side Company Profile** expanded with contract vehicles, technology partners, case studies, key personnel, geographic footprint, security posture, delivery model, and pricing posture (editable on the Company Profile page); downstream modules optionally consume it (`consumes_company_profile`)
 ✅ **Intelligence Assistant** with hard grounding contract: refuses to call the LLM when no documents are indexed or retrieval returns no hits; every answer carries citations and a status pill
 ✅ SAM.gov market intelligence client + search + import + link-to-opportunity
 ✅ CSV exports (Compliance, Risks) — populated by the structured writeback path
@@ -263,9 +324,9 @@ npm run dev
 ✅ Platform shell with module-aware left nav and stubbed module groups
 ✅ Pages: Login, Signup, Dashboard, Workspaces, Opportunity list/detail, Documents, Module workbenches, Market Intelligence, Assistant
 ✅ Seed script with example opportunity + example documents
-✅ Unit tests for auth, workspace scoping, LLM router, RAG, document status state machine, Opportunity Summary contract, Customer DNA contract, and the DNA-prerequisite enforcement for downstream modules
+✅ Unit tests for auth, workspace scoping, LLM router, RAG, document status state machine, Opportunity Summary contract, Customer DNA contract, the DNA-prerequisite enforcement for downstream modules, the Company DNA + Capability Match contracts, and the seller-data anti-overclaim guarantee
 
-📋 Remaining Capture modules (Requirement Breakdown, Win Themes, Capability Gaps, Staffing Assumptions, Proposal Outline, Market Intel Summary) — each follows the same ~80-line pattern as the DNA-aware modules already shipped.
+📋 Remaining Capture modules (Requirement Breakdown, Win Themes, Staffing Assumptions, Proposal Outline, Market Intel Summary) — each follows the same ~80-line pattern as the modules already shipped.
 
 ❌ Out of MVP scope by design: SSO, MFA, email flows, real-time collaboration, FedRAMP control implementation.
 
@@ -289,7 +350,13 @@ The platform is module-pluggable. To add (e.g.) `capture.win_themes`:
    module reads the DNA — the orchestrator will load the latest profile
    and refuse to call the LLM if one does not exist yet, returning a
    friendly `_missing_dependency: "customer_dna"` payload that the UI
-   surfaces as a deep-link to the DNA tab.
+   surfaces as a deep-link to the DNA tab. Set
+   `consumes_company_profile = True` to receive the seller-side
+   `company_profile` dict and a `seller_incomplete` flag in the prompt
+   context (optional — the module still runs without a profile, but should
+   label seller-side claims as assumptions when `seller_incomplete` is true).
+   Override `extra_context()` if you need to inject prior module outputs
+   (Capability Match does this to pull the latest Evaluation Criteria).
 3. Register it in `backend/app/intelligence/registry.py`.
 4. Define a Pydantic `*Output` schema in `backend/app/schemas/intelligence.py`
    and bind it to the module via `output_model`. The orchestrator

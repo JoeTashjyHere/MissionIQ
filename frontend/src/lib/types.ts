@@ -109,6 +109,7 @@ export interface ModuleSpec {
   version: string;
   output_schema_summary: Record<string, string>;
   requires_customer_dna: boolean;
+  consumes_company_profile: boolean;
 }
 
 // ── Module output shapes ──────────────────────────────────────────────────
@@ -282,6 +283,79 @@ export interface CompanyProfile {
   overview: string | null;
   differentiators: string | null;
   past_performance_summary: string | null;
+  contract_vehicles: string[] | null;
+  technology_partners: string[] | null;
+  case_studies: string | null;
+  key_personnel: string | null;
+  geographic_footprint: string | null;
+  security_posture: string | null;
+  delivery_model: string | null;
+  pricing_posture: string | null;
+}
+
+// ── Seller-side intelligence: Company DNA + Capability Match ───────────────
+
+export interface CompanyDnaProfile {
+  company_summary: string;
+  core_capabilities: string[];
+  past_performance: string[];
+  contract_vehicles?: string[];
+  certifications?: string[];
+  technology_partners?: string[];
+  differentiators: string[];
+  case_studies?: string[];
+  key_personnel?: string[];
+  geographic_footprint?: string | null;
+  security_posture?: string | null;
+  delivery_model?: string | null;
+  pricing_posture?: string | null;
+
+  executive_summary: string;
+  key_findings?: string[];
+  recommended_actions?: string[];
+
+  confidence?: "high" | "medium" | "low" | "insufficient";
+  profile_completeness?: "complete" | "partial" | "empty";
+}
+
+export interface FitArea {
+  area: string;
+  rationale: string;
+  evidence_refs?: string[];
+  confidence?: "high" | "medium" | "low";
+}
+
+export interface TeamingRecommendation {
+  partner_profile: string;
+  fills_gap: string;
+  rationale: string;
+}
+
+export interface CompanyGapRisk {
+  title: string;
+  description: string;
+  severity?: "low" | "medium" | "high" | "critical";
+  mitigation: string;
+}
+
+export interface CapabilityMatchOutput {
+  executive_summary: string;
+  win_assessment: string;
+  fit_score?: "strong" | "moderate" | "marginal" | "weak";
+  seller_data_complete?: boolean;
+
+  strong_fit_areas?: FitArea[];
+  weak_fit_areas?: FitArea[];
+  missing_capabilities?: string[];
+  required_proof_points?: string[];
+  recommended_teaming_partners?: TeamingRecommendation[];
+  suggested_discriminators?: string[];
+  reusable_win_themes?: string[];
+  capture_questions?: string[];
+  proposal_risks?: CompanyGapRisk[];
+
+  key_findings?: string[];
+  recommended_actions?: string[];
 }
 
 export interface Capability {

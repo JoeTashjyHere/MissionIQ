@@ -68,6 +68,22 @@ user: |
   Risk priorities:        {{ customer_dna.risk_priorities | join("; ") }}
   Stakeholder concerns:   {{ customer_dna.stakeholder_concerns | join("; ") }}
 
+  {% if company_profile and not seller_incomplete %}
+  SELLER CONTEXT — COMPANY PROFILE (optional)
+  ───────────────────────────────────────────
+  Differentiators:  {{ company_profile.differentiators or "(none)" }}
+  Capabilities:     {{ company_profile.capabilities | map(attribute="name") | join(", ") if company_profile.capabilities else "(none)" }}
+  Use this to sharpen `potential_discriminators` and `strategic_recommendations`
+  toward where WE can credibly compete. Decision drivers and weaknesses remain
+  customer/competition-driven, not seller-driven.
+  {% else %}
+  SELLER CONTEXT
+  ──────────────
+  (Company Profile is incomplete. Generate discriminators and recommendations
+  generically and add a recommended action to complete the Company Profile for
+  a seller-tailored read.)
+  {% endif %}
+
   EVIDENCE (Section M, Section L, related)
   ────────────────────────────────────────
   {% if evidence %}

@@ -76,11 +76,26 @@ def _build_skeleton(user_prompt: str) -> dict:
     evidence_refs = _parse_evidence_refs(user_prompt)
     has_evidence = bool(evidence_refs)
     dna = _parse_customer_dna(user_prompt)
+    seller_incomplete = _seller_incomplete(user_prompt)
 
     # ── Module-specific routes ───────────────────────────────────────────
     # Each downstream module prompt advertises unique schema field names.
     # Order matters only for disambiguation between the DNA producer prompt
     # and a generic "executive_summary" fallback.
+
+    if (
+        "win_assessment" in lower
+        and "fit_score" in lower
+        and "strong_fit_areas" in lower
+    ):
+        return _capability_match_skeleton(evidence_refs, dna, seller_incomplete)
+
+    if (
+        "company_summary" in lower
+        and "core_capabilities" in lower
+        and "profile_completeness" in lower
+    ):
+        return _company_dna_skeleton(seller_incomplete)
 
     if "why_requirement_exists" in lower and "customer_priority" in lower:
         return _compliance_matrix_skeleton(evidence_refs, dna)
@@ -251,6 +266,231 @@ def _parse_evidence_refs(user_prompt: str) -> list[dict]:
 
 def _hash(s: str) -> str:
     return hashlib.sha256(s.encode("utf-8")).hexdigest()[:16]
+
+
+def _seller_incomplete(user_prompt: str) -> bool:
+    """Detect the 'Company Profile incomplete' markers the prompts emit."""
+    markers = (
+        "SELLER-SIDE DATA INCOMPLETE",
+        "Company Profile is empty or nearly empty",
+        "Company Profile is incomplete",
+    )
+    return any(m in user_prompt for m in markers)
+
+
+def _company_dna_skeleton(seller_incomplete: bool) -> dict:
+    if seller_incomplete:
+        return {
+            "company_summary": "Insufficient seller-side data to synthesize a Company DNA Profile.",
+            "core_capabilities": [],
+            "past_performance": [],
+            "contract_vehicles": [],
+            "certifications": [],
+            "technology_partners": [],
+            "differentiators": [],
+            "case_studies": [],
+            "key_personnel": [],
+            "geographic_footprint": None,
+            "security_posture": None,
+            "delivery_model": None,
+            "pricing_posture": None,
+            "executive_summary": (
+                "The Company Profile is empty. MissionIQ cannot assess whether "
+                "we can credibly win or deliver without seller-side data."
+            ),
+            "key_findings": [],
+            "recommended_actions": [
+                "Open the Company Profile page and add core capabilities.",
+                "Add past performance examples, certifications, and contract vehicles.",
+                "Describe the delivery model, security posture, and key personnel.",
+            ],
+            "confidence": "insufficient",
+            "profile_completeness": "empty",
+        }
+    return {
+        "company_summary": (
+            "[Stub] A small-business systems integrator with mission operations, "
+            "FedRAMP-aligned cyber, and analytics depth. Configure a real LLM "
+            "for a defensible synthesis."
+        ),
+        "core_capabilities": [
+            "[Stub] Mission Operations Center Support (mature)",
+            "[Stub] FedRAMP Moderate Engineering (mature)",
+            "[Stub] Performance Analytics Dashboards (developing)",
+        ],
+        "past_performance": [
+            "[Stub] DHA mission ops (prime)",
+            "[Stub] VA analytics modernization (prime)",
+        ],
+        "contract_vehicles": ["[Stub] 8(a) Sole Source", "[Stub] GSA MAS"],
+        "certifications": ["[Stub] 8(a)", "[Stub] SDVOSB", "[Stub] CMMI-3"],
+        "technology_partners": ["[Stub] AWS", "[Stub] Microsoft", "[Stub] Splunk"],
+        "differentiators": [
+            "[Stub] 24x7 SOC with embedded data engineering",
+            "[Stub] FedRAMP-aligned managed services",
+        ],
+        "case_studies": ["[Stub] Stood up a 24x7 ops center in 45 days for a DoD health system."],
+        "key_personnel": ["[Stub] Program Manager (PMP, 15 yrs DHA)", "[Stub] ISSO (CISSP)"],
+        "geographic_footprint": "[Stub] National; cleared staff in NCR and San Antonio.",
+        "security_posture": "[Stub] FedRAMP Moderate experience; IL5 lineage; facility clearance.",
+        "delivery_model": "[Stub] Embedded agile pods with a shared 24x7 SOC backbone.",
+        "pricing_posture": "[Stub] Competitive value; lean indirect rates.",
+        "executive_summary": (
+            "[Stub] Company DNA synthesized from the Company Profile. Mature in "
+            "mission ops and cyber; developing in analytics. Credible small-business "
+            "prime for DHA-scale operations work."
+        ),
+        "key_findings": [
+            "[Stub] Strongest where mission ops and FedRAMP intersect.",
+            "[Stub] Analytics is a developing capability — a likely teaming target.",
+        ],
+        "recommended_actions": [
+            "Add CPARS-backed past performance to strengthen the profile.",
+            "Catalog named key personnel and their clearances.",
+        ],
+        "confidence": "medium",
+        "profile_completeness": "partial",
+    }
+
+
+def _capability_match_skeleton(
+    evidence_refs: list[dict], dna: dict | None, seller_incomplete: bool
+) -> dict:
+    e_refs = [r["ref"] for r in evidence_refs[:4]] or ["E1"]
+    mission_anchor = (dna or {}).get("mission", "the customer's mission") if dna else "the customer's mission"
+
+    if seller_incomplete:
+        return {
+            "executive_summary": (
+                "[Stub] A fit assessment was produced, but the Company Profile is "
+                "incomplete — every seller-side claim below is an ASSUMPTION."
+            ),
+            "win_assessment": (
+                "[Assumption — Company Profile incomplete] Cannot credibly judge "
+                "win/deliver confidence without seller-side data. Complete the "
+                "Company Profile for a grounded verdict."
+            ),
+            "fit_score": "moderate",
+            "seller_data_complete": False,
+            "strong_fit_areas": [],
+            "weak_fit_areas": [],
+            "missing_capabilities": [
+                "[Assumption] Unknown — Company Profile not populated."
+            ],
+            "required_proof_points": [
+                "[Assumption] Cannot identify proof points without company data."
+            ],
+            "recommended_teaming_partners": [],
+            "suggested_discriminators": [],
+            "reusable_win_themes": [],
+            "capture_questions": [
+                "What are our actual capabilities, past performance, and certifications?",
+            ],
+            "proposal_risks": [
+                {
+                    "title": "[Assumption] Seller-side data missing",
+                    "description": "No Company Profile to assess gaps against.",
+                    "severity": "high",
+                    "mitigation": "Complete the Company Profile, then re-run Capability Match.",
+                }
+            ],
+            "key_findings": ["[Stub] Seller-side data incomplete."],
+            "recommended_actions": [
+                "Complete the Company Profile (capabilities, past performance, certifications).",
+                "Re-run Capability Match for a grounded win/deliver verdict.",
+            ],
+            "citations": [],
+        }
+
+    return {
+        "executive_summary": (
+            f"[Stub] Capability match across Customer DNA, requirements, evaluation "
+            f"criteria, market intel, and the Company Profile. Grounded in "
+            f"{len(evidence_refs)} evidence chunk(s)."
+        ),
+        "win_assessment": (
+            "[Stub] We can credibly win and deliver this. Our mature mission-ops and "
+            f"FedRAMP capabilities map directly to {mission_anchor}; the main gap is "
+            "DHA-specific past performance, which is closable via teaming."
+        ),
+        "fit_score": "strong",
+        "seller_data_complete": True,
+        "strong_fit_areas": [
+            {
+                "area": "24x7 Mission Operations",
+                "rationale": "Mature MOC capability maps to the core 24x7 ops requirement and the customer's continuity-of-operations priority.",
+                "evidence_refs": e_refs[:1],
+                "confidence": "high",
+            },
+            {
+                "area": "FedRAMP / IL5 Security Posture",
+                "rationale": "FedRAMP Moderate engineering aligns with the customer's risk priorities and likely Section M security weighting.",
+                "evidence_refs": e_refs[:1],
+                "confidence": "high",
+            },
+        ],
+        "weak_fit_areas": [
+            {
+                "area": "Performance Analytics",
+                "rationale": "Analytics is only a developing capability vs a likely evaluated subfactor.",
+                "evidence_refs": e_refs[:1],
+                "confidence": "medium",
+            }
+        ],
+        "missing_capabilities": [
+            "[Stub] DHA-specific past performance at full contract scale",
+        ],
+        "required_proof_points": [
+            "[Stub] CPARS for a comparable 24x7 mission-ops contract",
+            "[Stub] Named, cleared Program Manager with DHA tenure",
+            "[Stub] Evidence of a successful 60-day transition",
+        ],
+        "recommended_teaming_partners": [
+            {
+                "partner_profile": "[Stub] Mid-tier analytics firm with DHA past performance",
+                "fills_gap": "Performance analytics depth + DHA relevance",
+                "rationale": "Closes the analytics gap and adds DHA-specific CPARS.",
+            }
+        ],
+        "suggested_discriminators": [
+            "[Stub] Embedded data engineering inside the SOC",
+            "[Stub] 45-day stand-up track record",
+            "[Stub] 8(a) status with credible scale",
+        ],
+        "reusable_win_themes": [
+            "[Stub] Mission continuity without disruption during transition",
+            "[Stub] Security-first operations aligned to FedRAMP/IL5",
+        ],
+        "capture_questions": [
+            "[Stub] Who is the incumbent PM and what is the customer's satisfaction?",
+            "[Stub] Is analytics evaluated as a discriminator or table stakes?",
+        ],
+        "proposal_risks": [
+            {
+                "title": "[Stub] Thin DHA past performance",
+                "description": "Limited DHA-specific CPARS vs the competitive set.",
+                "severity": "high",
+                "mitigation": "Team with a DHA-experienced sub; cite adjacent DoD health work.",
+            },
+            {
+                "title": "[Stub] Analytics maturity gap",
+                "description": "Analytics capability is developing, not mature.",
+                "severity": "medium",
+                "mitigation": "Bring an analytics teammate and lead with SOC-embedded data engineering.",
+            },
+        ],
+        "key_findings": [
+            "[Stub] Strong fit on mission ops and security; gap on analytics + DHA past performance.",
+        ],
+        "recommended_actions": [
+            "Open teaming discussions to close the analytics + past-performance gaps.",
+            "Assemble the required proof points before the bid decision.",
+        ],
+        "citations": [
+            {"evidence_ref": ref["ref"], "claim": "Supports fit assessment."}
+            for ref in evidence_refs[:4]
+        ],
+    }
 
 
 def _parse_customer_dna(user_prompt: str) -> dict | None:

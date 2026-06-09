@@ -35,6 +35,7 @@ def list_modules() -> list[ModuleSpec]:
             version=m.version,
             output_schema_summary=m.output_schema_summary,
             requires_customer_dna=m.requires_customer_dna,
+            consumes_company_profile=m.consumes_company_profile,
         )
         for m in get_registry().all()
     ]
@@ -53,6 +54,7 @@ def get_module_spec(module_id: str) -> ModuleSpec:
         version=cls.version,
         output_schema_summary=cls.output_schema_summary,
         requires_customer_dna=cls.requires_customer_dna,
+        consumes_company_profile=cls.consumes_company_profile,
     )
 
 

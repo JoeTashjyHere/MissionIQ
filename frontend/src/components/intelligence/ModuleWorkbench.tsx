@@ -23,6 +23,7 @@ export function ModuleWorkbench({
   description,
   renderer,
   outputRenderer,
+  requiresDocuments = true,
 }: {
   opportunityId: string;
   moduleId: string;
@@ -32,6 +33,11 @@ export function ModuleWorkbench({
   renderer?: Renderer;
   /** New: receives the full AIOutput (citations, status, model, etc.) */
   outputRenderer?: OutputRenderer;
+  /**
+   * When false, the module is generated from non-document sources (e.g. the
+   * Company Profile) and is not gated on indexed opportunity documents.
+   */
+  requiresDocuments?: boolean;
 }) {
   const [latest, setLatest] = useState<AIOutput | null | undefined>(undefined);
   const [docs, setDocs] = useState<DocumentRecord[] | null>(null);
@@ -88,7 +94,7 @@ export function ModuleWorkbench({
     );
   }
 
-  const noReadyDocs = readyDocs.length === 0;
+  const noReadyDocs = requiresDocuments && readyDocs.length === 0;
 
   if (latest === null) {
     if (noReadyDocs) {

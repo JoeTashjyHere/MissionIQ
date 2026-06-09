@@ -73,6 +73,21 @@ user: |
   Risk priorities:        {{ customer_dna.risk_priorities | join("; ") }}
   Stakeholder concerns:   {{ customer_dna.stakeholder_concerns | join("; ") }}
 
+  {% if company_profile and not seller_incomplete %}
+  SELLER CONTEXT — COMPANY PROFILE (optional)
+  ───────────────────────────────────────────
+  Differentiators:  {{ company_profile.differentiators or "(none)" }}
+  Capabilities:     {{ company_profile.capabilities | map(attribute="name") | join(", ") if company_profile.capabilities else "(none)" }}
+  Use this only to flag, in `notes`, where our differentiators let us respond
+  strongly to a high-priority requirement. Do NOT let seller data change a
+  requirement's existence or customer priority.
+  {% else %}
+  SELLER CONTEXT
+  ──────────────
+  (Company Profile is incomplete. Do not infer seller-side strengths. Any
+  note about our ability to respond is an assumption — label it as such.)
+  {% endif %}
+
   EVIDENCE FROM UPLOADED DOCUMENTS
   ────────────────────────────────
   {% if evidence %}

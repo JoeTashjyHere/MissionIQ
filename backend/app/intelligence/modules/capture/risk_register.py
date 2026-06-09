@@ -44,3 +44,4 @@ class RiskRegisterModule(BaseIntelligenceModule):
     retrieval_top_k = 16
     minimum_evidence = 1
     requires_customer_dna = True
+    consumes_company_profile = True

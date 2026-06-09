@@ -66,6 +66,25 @@ export default function CompanyProfilePage() {
     (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) =>
       setProfile((p) => (p ? { ...p, [k]: e.target.value } : p));
 
+  const updateArray = (k: keyof CompanyProfile) =>
+    (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) =>
+      setProfile((p) =>
+        p
+          ? {
+              ...p,
+              [k]: e.target.value
+                .split(",")
+                .map((s) => s.trim())
+                .filter(Boolean),
+            }
+          : p,
+      );
+
+  const arrayValue = (k: keyof CompanyProfile) => {
+    const v = profile[k];
+    return Array.isArray(v) ? v.join(", ") : "";
+  };
+
   return (
     <div>
       <PageHeader
@@ -105,6 +124,11 @@ export default function CompanyProfilePage() {
                 value={profile.size_standard ?? ""}
                 onChange={update("size_standard")}
               />
+              <Input
+                label="Certifications (comma-separated)"
+                value={arrayValue("certifications")}
+                onChange={updateArray("certifications")}
+              />
             </div>
           </CardBody>
         </Card>
@@ -127,6 +151,60 @@ export default function CompanyProfilePage() {
                 value={profile.past_performance_summary ?? ""}
                 onChange={update("past_performance_summary")}
               />
+            </div>
+          </CardBody>
+        </Card>
+        <Card>
+          <CardHeader
+            title="Seller-side intelligence (Company DNA)"
+            subtitle="Powers Company DNA and the Capability Match fit assessment. The more you capture, the more grounded the win/deliver verdict."
+          />
+          <CardBody>
+            <div className="flex flex-col gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <Input
+                  label="Contract vehicles (comma-separated)"
+                  value={arrayValue("contract_vehicles")}
+                  onChange={updateArray("contract_vehicles")}
+                />
+                <Input
+                  label="Technology partners (comma-separated)"
+                  value={arrayValue("technology_partners")}
+                  onChange={updateArray("technology_partners")}
+                />
+              </div>
+              <Textarea
+                label="Relevant case studies"
+                value={profile.case_studies ?? ""}
+                onChange={update("case_studies")}
+              />
+              <Textarea
+                label="Key personnel / SMEs"
+                value={profile.key_personnel ?? ""}
+                onChange={update("key_personnel")}
+              />
+              <Textarea
+                label="Delivery model"
+                value={profile.delivery_model ?? ""}
+                onChange={update("delivery_model")}
+              />
+              <Textarea
+                label="Security / compliance posture"
+                value={profile.security_posture ?? ""}
+                onChange={update("security_posture")}
+              />
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <Textarea
+                  label="Geographic footprint"
+                  value={profile.geographic_footprint ?? ""}
+                  onChange={update("geographic_footprint")}
+                />
+                <Textarea
+                  label="Pricing / cost-positioning notes"
+                  value={profile.pricing_posture ?? ""}
+                  onChange={update("pricing_posture")}
+                />
+              </div>
             </div>
           </CardBody>
         </Card>

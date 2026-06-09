@@ -33,6 +33,18 @@ class CompanyProfile(UUIDPkMixin, TimestampMixin, Base):
     differentiators: Mapped[str | None] = mapped_column(Text)
     past_performance_summary: Mapped[str | None] = mapped_column(Text)
 
+    # Seller-side intelligence fields (the Company DNA source of truth).
+    # These let MissionIQ personalize outputs to the company pursuing the
+    # work, not just the customer buying it.
+    contract_vehicles: Mapped[list[str] | None] = mapped_column(ARRAY(String))
+    technology_partners: Mapped[list[str] | None] = mapped_column(ARRAY(String))
+    case_studies: Mapped[str | None] = mapped_column(Text)
+    key_personnel: Mapped[str | None] = mapped_column(Text)
+    geographic_footprint: Mapped[str | None] = mapped_column(Text)
+    security_posture: Mapped[str | None] = mapped_column(Text)
+    delivery_model: Mapped[str | None] = mapped_column(Text)
+    pricing_posture: Mapped[str | None] = mapped_column(Text)
+
     workspace = relationship("Workspace", back_populates="company_profile")
     capabilities = relationship(
         "Capability", back_populates="company_profile", cascade="all, delete-orphan"

@@ -91,7 +91,43 @@ _FAKE_DNA = {
 }
 
 
-def _render(prompt_id: str, prompt_version: str, evidence: list[_FakeEvidence]) -> str:
+_FAKE_COMPANY_PROFILE = {
+    "legal_name": "Demo Federal Solutions LLC",
+    "primary_naics": "541512",
+    "size_standard": "Small Business",
+    "certifications": ["8(a)", "SDVOSB"],
+    "overview": "Mission ops + cyber small business.",
+    "differentiators": "FedRAMP-aligned managed services; 24x7 SOC.",
+    "past_performance_summary": "DHA, VA, US Army.",
+    "contract_vehicles": ["8(a) Sole Source"],
+    "technology_partners": ["AWS"],
+    "case_studies": None,
+    "key_personnel": None,
+    "geographic_footprint": None,
+    "security_posture": "FedRAMP Moderate.",
+    "delivery_model": "Embedded agile pods.",
+    "pricing_posture": None,
+    "capabilities": [
+        {
+            "name": "Mission Operations Center Support",
+            "category": "Operations",
+            "maturity": "mature",
+            "description": "24x7 ops center.",
+            "keywords": [],
+        }
+    ],
+}
+
+
+def _render(
+    prompt_id: str,
+    prompt_version: str,
+    evidence: list[_FakeEvidence],
+    *,
+    company_profile: dict | None = _FAKE_COMPANY_PROFILE,
+    seller_incomplete: bool = False,
+    **extra,
+) -> str:
     prompts = get_prompt_library()
     _, user, _ = prompts.render(
         prompt_id,
@@ -100,6 +136,9 @@ def _render(prompt_id: str, prompt_version: str, evidence: list[_FakeEvidence]) 
         evidence=evidence,
         market_evidence=[],
         customer_dna=_FAKE_DNA,
+        company_profile=company_profile,
+        seller_incomplete=seller_incomplete,
+        **extra,
     )
     return user
 

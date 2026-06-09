@@ -18,6 +18,22 @@ opportunity, the module short-circuits with ``status = "insufficient_context"``
 and a clear ``recommended_actions`` payload pointing the user to the DNA
 synthesis step. This is the platform's anti-generic-AI guarantee: downstream
 modules cannot run without the customer synthesis upstream of them.
+
+Company Profile consumption (seller-side intelligence)
+------------------------------------------------------
+
+A module that personalizes output to the company *pursuing* the work sets
+``consumes_company_profile = True``. The orchestrator loads the workspace
+Company Profile + capabilities, serializes them into the ``company_profile``
+Jinja variable, and computes ``seller_incomplete`` (True when the profile is
+essentially empty). Unlike Customer DNA, the Company Profile is **optional**:
+modules still run without it, but their prompts are instructed to clearly
+label seller-side assumptions as incomplete so a capture lead is never misled
+into thinking a fit assessment was grounded in real company data.
+
+``company_profile`` and ``seller_incomplete`` are ALWAYS passed to the
+prompt renderer (``None`` / ``False`` when not consumed) so every template
+can reference them uniformly under Jinja ``StrictUndefined``.
 """
 from __future__ import annotations
 
@@ -34,7 +50,7 @@ from app.intelligence.rag import Evidence, RAGEngine
 from app.llm.base import LLMResponse
 from app.llm.prompt_library import PromptLibrary
 from app.llm.router import LLMRouter
-from app.models import AIOutput, Opportunity
+from app.models import AIOutput, Capability, CompanyProfile, Opportunity
 
 
 CUSTOMER_DNA_MODULE_ID = "capture.customer_dna"
@@ -105,6 +121,12 @@ class BaseIntelligenceModule:
     # If no DNA Profile exists yet, the module short-circuits with
     # ``status = "insufficient_context"`` and a clear remediation message.
     requires_customer_dna: ClassVar[bool] = False
+    # If True, the orchestrator loads the workspace Company Profile +
+    # capabilities and passes them as ``company_profile`` (with a
+    # ``seller_incomplete`` flag). The profile is OPTIONAL: the module still
+    # runs without it, but its prompt should label seller-side assumptions
+    # as incomplete.
+    consumes_company_profile: ClassVar[bool] = False
 
     def __init__(
         self,
@@ -134,6 +156,65 @@ class BaseIntelligenceModule:
         )
         row = (await self.db.execute(stmt)).scalar_one_or_none()
         return row.output_json if row else None
+
+    async def _load_latest_output(
+        self, *, workspace_id: uuid.UUID, opportunity_id: uuid.UUID, module_id: str
+    ) -> dict[str, Any] | None:
+        """Return the most recent successful output payload for any module."""
+        stmt = (
+            select(AIOutput)
+            .where(AIOutput.workspace_id == workspace_id)
+            .where(AIOutput.opportunity_id == opportunity_id)
+            .where(AIOutput.module_id == module_id)
+            .where(AIOutput.status == "ok")
+            .order_by(desc(AIOutput.created_at))
+            .limit(1)
+        )
+        row = (await self.db.execute(stmt)).scalar_one_or_none()
+        return row.output_json if row else None
+
+    async def _load_company_profile(
+        self, *, workspace_id: uuid.UUID
+    ) -> tuple[dict[str, Any] | None, bool]:
+        """Serialize the workspace Company Profile + capabilities.
+
+        Returns ``(profile_dict_or_None, seller_incomplete)``. ``seller_incomplete``
+        is True when the profile carries no meaningful seller-side signal, which
+        the prompts use to label fit assessments as assumption-based.
+        """
+        cp = (
+            await self.db.execute(
+                select(CompanyProfile).where(
+                    CompanyProfile.workspace_id == workspace_id
+                )
+            )
+        ).scalar_one_or_none()
+        if cp is None:
+            return None, True
+
+        caps = list(
+            (
+                await self.db.execute(
+                    select(Capability)
+                    .where(Capability.workspace_id == workspace_id)
+                    .order_by(Capability.name.asc())
+                )
+            )
+            .scalars()
+            .all()
+        )
+        profile = _safe_company_profile(cp, caps)
+        return profile, _is_seller_incomplete(profile)
+
+    async def extra_context(
+        self, *, ctx: RAGContext, customer_dna: dict[str, Any] | None
+    ) -> dict[str, Any]:
+        """Hook for modules that need additional prompt variables.
+
+        Default returns nothing. Modules like Capability Match override this to
+        load prior outputs (e.g. the latest Evaluation Criteria) for synthesis.
+        """
+        return {}
 
     async def run(
         self,
@@ -185,7 +266,19 @@ class BaseIntelligenceModule:
         if len(evidence) < self.minimum_evidence:
             status = "insufficient_context"
 
-        # 3. Render prompt with opportunity + evidence + (optional) DNA
+        # 3. Optionally load seller-side Company Profile (always pass the
+        #    variables so every template can reference them uniformly).
+        company_profile: dict[str, Any] | None = None
+        seller_incomplete = False
+        if self.consumes_company_profile:
+            company_profile, seller_incomplete = await self._load_company_profile(
+                workspace_id=ctx.workspace_id
+            )
+
+        # 4. Module-specific extra context (e.g. prior Evaluation Criteria)
+        extra = await self.extra_context(ctx=ctx, customer_dna=customer_dna)
+
+        # 5. Render prompt with opportunity + evidence + (optional) DNA + seller
         prompts = self.prompts
         system, user, _ = prompts.render(
             self.prompt_id,
@@ -194,9 +287,12 @@ class BaseIntelligenceModule:
             evidence=evidence,
             market_evidence=market_evidence,
             customer_dna=customer_dna,
+            company_profile=company_profile,
+            seller_incomplete=seller_incomplete,
+            **extra,
         )
 
-        # 4. LLM call
+        # 6. LLM call
         llm = self.llm_router.chat_provider(model_override)
         llm_resp = await llm.generate_json(system=system, user=user)
         try:
@@ -235,3 +331,61 @@ def _safe_opp(opp: Opportunity) -> dict[str, Any]:
         "capture_stage": opp.capture_stage,
         "contract_vehicle": opp.contract_vehicle,
     }
+
+
+def _safe_company_profile(
+    cp: CompanyProfile, caps: list[Capability]
+) -> dict[str, Any]:
+    return {
+        "legal_name": cp.legal_name,
+        "primary_naics": cp.primary_naics,
+        "size_standard": cp.size_standard,
+        "certifications": cp.certifications or [],
+        "overview": cp.overview,
+        "differentiators": cp.differentiators,
+        "past_performance_summary": cp.past_performance_summary,
+        "contract_vehicles": cp.contract_vehicles or [],
+        "technology_partners": cp.technology_partners or [],
+        "case_studies": cp.case_studies,
+        "key_personnel": cp.key_personnel,
+        "geographic_footprint": cp.geographic_footprint,
+        "security_posture": cp.security_posture,
+        "delivery_model": cp.delivery_model,
+        "pricing_posture": cp.pricing_posture,
+        "capabilities": [
+            {
+                "name": c.name,
+                "category": c.category,
+                "maturity": c.maturity,
+                "description": c.description,
+                "keywords": c.keywords or [],
+            }
+            for c in caps
+        ],
+    }
+
+
+# A profile is "incomplete" for seller-side reasoning when it has neither a
+# narrative overview/differentiators nor any catalogued capabilities to match
+# against the opportunity.
+_SELLER_SIGNAL_FIELDS = (
+    "overview",
+    "differentiators",
+    "past_performance_summary",
+    "case_studies",
+    "delivery_model",
+    "security_posture",
+)
+
+
+def _is_seller_incomplete(profile: dict[str, Any]) -> bool:
+    has_narrative = any(
+        (profile.get(f) or "").strip() for f in _SELLER_SIGNAL_FIELDS
+    )
+    has_caps = bool(profile.get("capabilities"))
+    has_lists = bool(
+        profile.get("certifications")
+        or profile.get("contract_vehicles")
+        or profile.get("technology_partners")
+    )
+    return not (has_narrative or has_caps or has_lists)

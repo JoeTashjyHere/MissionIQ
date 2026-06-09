@@ -30,6 +30,7 @@ class ModuleSpec(BaseModel):
     version: str
     output_schema_summary: dict[str, str]
     requires_customer_dna: bool = False
+    consumes_company_profile: bool = False
 
 
 class RunModuleRequest(BaseModel):
@@ -229,4 +230,91 @@ class RiskRegisterOutput(BaseModel):
     customer_risks: list[RiskItem] = []
 
     top_risks: list[str] = []
+    citations: list[dict] = []
+
+
+# ── Company DNA Profile (seller-side synthesis) ──
+# The mirror of Customer DNA. Where Customer DNA captures who the customer is,
+# Company DNA captures who *we* are and how credibly we can win and deliver.
+
+
+class CompanyDnaProfile(BaseModel):
+    """Synthesis of the company pursuing the work, drawn from the workspace
+    Company Profile + capability catalog.
+
+    Downstream personalization (Capability Match, win themes, proof points)
+    reads this so outputs are tailored to both sides of the deal.
+    """
+
+    company_summary: str
+    core_capabilities: list[str]
+    past_performance: list[str]
+    contract_vehicles: list[str] = []
+    certifications: list[str] = []
+    technology_partners: list[str] = []
+    differentiators: list[str]
+    case_studies: list[str] = []
+    key_personnel: list[str] = []
+    geographic_footprint: str | None = None
+    security_posture: str | None = None
+    delivery_model: str | None = None
+    pricing_posture: str | None = None
+
+    executive_summary: str
+    key_findings: list[str] = []
+    recommended_actions: list[str] = []
+
+    confidence: Literal["high", "medium", "low", "insufficient"] = "medium"
+    profile_completeness: Literal["complete", "partial", "empty"] = "partial"
+
+
+# ── Capability Match (seller × customer fit assessment) ──
+
+
+class FitArea(BaseModel):
+    """A single fit assessment with the rationale a capture lead would give."""
+
+    area: str
+    rationale: str
+    evidence_refs: list[str] = []
+    confidence: Literal["high", "medium", "low"] = "medium"
+
+
+class TeamingRecommendation(BaseModel):
+    partner_profile: str
+    fills_gap: str
+    rationale: str
+
+
+class CompanyGapRisk(BaseModel):
+    title: str
+    description: str
+    severity: Literal["low", "medium", "high", "critical"] = "medium"
+    mitigation: str
+
+
+class CapabilityMatchOutput(BaseModel):
+    """A senior-capture-lead assessment of whether we can credibly win and
+    deliver: where we are strong, where we are weak, what is missing, and the
+    concrete moves (proof points, teaming, discriminators, win themes,
+    capture questions) that close the gap.
+    """
+
+    executive_summary: str
+    win_assessment: str  # the candid "can we credibly win and deliver?" verdict
+    fit_score: Literal["strong", "moderate", "marginal", "weak"] = "moderate"
+    seller_data_complete: bool = True  # False ⇒ seller-side claims are assumptions
+
+    strong_fit_areas: list[FitArea] = []
+    weak_fit_areas: list[FitArea] = []
+    missing_capabilities: list[str] = []
+    required_proof_points: list[str] = []
+    recommended_teaming_partners: list[TeamingRecommendation] = []
+    suggested_discriminators: list[str] = []
+    reusable_win_themes: list[str] = []
+    capture_questions: list[str] = []
+    proposal_risks: list[CompanyGapRisk] = []
+
+    key_findings: list[str] = []
+    recommended_actions: list[str] = []
     citations: list[dict] = []

@@ -68,6 +68,22 @@ user: |
   Risk priorities:        {{ customer_dna.risk_priorities | join("; ") }}
   Stakeholder concerns:   {{ customer_dna.stakeholder_concerns | join("; ") }}
 
+  {% if company_profile and not seller_incomplete %}
+  SELLER CONTEXT — COMPANY PROFILE (optional)
+  ───────────────────────────────────────────
+  Differentiators:  {{ company_profile.differentiators or "(none)" }}
+  Capabilities:     {{ company_profile.capabilities | map(attribute="name") | join(", ") if company_profile.capabilities else "(none)" }}
+  Past performance: {{ company_profile.past_performance_summary or "(none)" }}
+  Use this to sharpen Capture and Proposal lane risks tied to OUR gaps (thin
+  past performance, missing capability, bench depth). Customer/Delivery risks
+  remain mission-driven.
+  {% else %}
+  SELLER CONTEXT
+  ──────────────
+  (Company Profile is incomplete. Capture/Proposal risks tied to our gaps are
+  assumptions — label them and recommend completing the Company Profile.)
+  {% endif %}
+
   EVIDENCE FROM UPLOADED DOCUMENTS
   ────────────────────────────────
   {% if evidence %}

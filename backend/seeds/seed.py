@@ -89,6 +89,33 @@ async def seed(if_empty: bool) -> None:
                     "and a CMMI-3 process maturity."
                 ),
                 past_performance_summary="DHA, VA, US Army C5ISR, DLA — five active prime contracts.",
+                contract_vehicles=["8(a) Sole Source", "GSA MAS", "CIO-SP3 SB"],
+                technology_partners=["AWS", "Microsoft", "Splunk", "Databricks"],
+                case_studies=(
+                    "Stood up a 24x7 mission operations center for a DoD health system in 45 days "
+                    "with zero mission downtime during transition. Delivered a FedRAMP Moderate "
+                    "ATO for a VA analytics platform in under nine months."
+                ),
+                key_personnel=(
+                    "Program Manager (PMP, 15 yrs DHA/MHS), Information System Security Officer "
+                    "(CISSP), Lead Data Engineer (former DHA contractor), Transition Lead (ITIL)."
+                ),
+                geographic_footprint=(
+                    "National delivery; cleared staff concentrated in the National Capital Region "
+                    "and San Antonio. Remote-eligible for non-sensitive work."
+                ),
+                security_posture=(
+                    "FedRAMP Moderate experience, IL5 lineage, facility clearance, and a track "
+                    "record of clean A&A / continuous ATO support."
+                ),
+                delivery_model=(
+                    "Embedded agile delivery pods backed by a shared 24x7 SOC and a centralized "
+                    "engineering bench. CMMI-3 processes with measured SLAs."
+                ),
+                pricing_posture=(
+                    "Competitive value positioning enabled by lean indirect rates and a "
+                    "blended on/near-site staffing model."
+                ),
             )
             db.add(cp)
             await db.flush()

@@ -36,9 +36,12 @@ def get_registry() -> ModuleRegistry:
     """
     registry = ModuleRegistry()
 
-    # The synthesis step (read by everything else)
+    # Synthesis steps (read by everything else)
     from app.intelligence.modules.capture.customer_dna import (  # noqa: E402
         CustomerDnaModule,
+    )
+    from app.intelligence.modules.capture.company_dna import (  # noqa: E402
+        CompanyDnaModule,
     )
 
     # Briefing-style modules
@@ -57,9 +60,16 @@ def get_registry() -> ModuleRegistry:
         RiskRegisterModule,
     )
 
+    # Seller × customer fit engine (requires Customer DNA, consumes Company)
+    from app.intelligence.modules.capture.capability_match import (  # noqa: E402
+        CapabilityMatchModule,
+    )
+
     registry.register(CustomerDnaModule)
+    registry.register(CompanyDnaModule)
     registry.register(OpportunitySummaryModule)
     registry.register(ComplianceMatrixModule)
     registry.register(EvaluationCriteriaModule)
     registry.register(RiskRegisterModule)
+    registry.register(CapabilityMatchModule)
     return registry

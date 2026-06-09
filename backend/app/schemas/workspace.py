@@ -80,6 +80,14 @@ class CompanyProfileUpdate(BaseModel):
     overview: str | None = None
     differentiators: str | None = None
     past_performance_summary: str | None = None
+    contract_vehicles: list[str] | None = None
+    technology_partners: list[str] | None = None
+    case_studies: str | None = None
+    key_personnel: str | None = None
+    geographic_footprint: str | None = None
+    security_posture: str | None = None
+    delivery_model: str | None = None
+    pricing_posture: str | None = None
 
 
 class CompanyProfileResponse(ORMModel):
@@ -95,6 +103,14 @@ class CompanyProfileResponse(ORMModel):
     overview: str | None
     differentiators: str | None
     past_performance_summary: str | None
+    contract_vehicles: list[str] | None
+    technology_partners: list[str] | None
+    case_studies: str | None
+    key_personnel: str | None
+    geographic_footprint: str | None
+    security_posture: str | None
+    delivery_model: str | None
+    pricing_posture: str | None
 
 
 class CapabilityCreate(BaseModel):
