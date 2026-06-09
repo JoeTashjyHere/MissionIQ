@@ -358,6 +358,72 @@ export interface CapabilityMatchOutput {
   recommended_actions?: string[];
 }
 
+// ── Win Strategy Engine (flagship synthesis) ──────────────────────────────
+
+export type StrategicBasis = "evidence" | "inference" | "assumption";
+
+export interface StrategicPoint {
+  statement: string;
+  basis: StrategicBasis;
+  sources?: string[];
+}
+
+export interface BlackHatPoint {
+  competitor_move: string;
+  impact: string;
+  our_counter: string;
+  basis: StrategicBasis;
+  sources?: string[];
+}
+
+export interface CompetitorPosture {
+  name: string;
+  positioning: string;
+  threat_level: "low" | "medium" | "high";
+  our_response: string;
+  basis: StrategicBasis;
+  sources?: string[];
+}
+
+export interface CompetitiveAssessment {
+  summary: string;
+  competitors: CompetitorPosture[];
+}
+
+export interface CaptureAction {
+  action: string;
+  rationale: string;
+  priority: "immediate" | "near_term" | "pre_rfp";
+  owner?: string | null;
+}
+
+export interface WinConfidenceAssessment {
+  level: "high" | "medium" | "low";
+  score: number;
+  rationale: string;
+  key_drivers?: string[];
+}
+
+export interface WinStrategyOutput {
+  executive_pursuit_recommendation: string;
+  pursuit_recommendation: "pursue" | "pursue_with_conditions" | "no_bid";
+
+  strengths?: StrategicPoint[];
+  weaknesses?: StrategicPoint[];
+  key_discriminators?: StrategicPoint[];
+  black_hat_assessment?: BlackHatPoint[];
+  likely_evaluator_concerns?: StrategicPoint[];
+  win_themes?: StrategicPoint[];
+
+  competitive_assessment: CompetitiveAssessment;
+  critical_capture_actions?: CaptureAction[];
+  win_confidence_assessment: WinConfidenceAssessment;
+
+  inputs_used?: string[];
+  inputs_missing?: string[];
+  key_findings?: string[];
+}
+
 export interface Capability {
   id: Uuid;
   workspace_id: Uuid;

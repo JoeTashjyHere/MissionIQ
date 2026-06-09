@@ -108,6 +108,46 @@ Market intelligence (RAG) ──────────────────
   discriminators / seller-gap risks, and when it is absent they label
   seller-side notes as assumptions.
 
+### The apex — Win Strategy Engine (flagship deliverable)
+
+Everything above feeds the **Win Strategy** module (`capture.win_strategy`) —
+the culminating, gate-review-grade deliverable. It does **not** summarize
+documents; it synthesizes them into a senior-capture-executive assessment.
+
+```
+Customer DNA ─┐
+Company DNA   │
+Opp Documents │     ┌──────────────────────────────┐
+Eval Criteria ├──►  │        Win Strategy          │
+Capability    │     │  1. Executive Pursuit Rec.   │
+  Match       │     │  2. Strengths                │
+Market Intel  │     │  3. Weaknesses               │
+Risk Register ┘     │  4. Key Discriminators       │
+                    │  5. Black Hat Assessment     │
+                    │  6. Likely Evaluator Concerns│
+                    │  7. Win Themes               │
+                    │  8. Competitive Assessment   │
+                    │  9. Critical Capture Actions │
+                    │ 10. Win Confidence (0–100)   │
+                    └──────────────────────────────┘
+```
+
+**Flagship guarantees:**
+
+- **Synthesis, not summary.** The prompt deletes any line that merely restates
+  the RFP. Every line must advance a strategic position.
+- **Epistemic honesty.** Every point declares a `basis` —
+  `evidence` (backed by a cited input), `inference` (defensible judgment), or
+  `assumption` (a belief to validate). Evidence points must carry `sources`
+  (`Customer DNA: mission`, `Company DNA: differentiators`, `E2`, `M1`, …). The
+  UI renders these as colored chips so a gate review sees exactly what is proven
+  vs inferred vs assumed.
+- **Partial-input integrity.** Win Strategy requires only Customer DNA, but it
+  reads Company DNA, Capability Match, Evaluation Criteria, and the Risk
+  Register when present. Missing inputs are recorded in `inputs_missing`, the
+  affected conclusions drop to inference/assumption, and the win-confidence
+  score is dampened — it never fakes evidence it does not have.
+
 ---
 
 ## Architecture Documents
@@ -230,16 +270,31 @@ provider configured the same path produces substantive output.
     verdict plus strong/weak fit areas, missing capabilities, required proof
     points, recommended teaming partners, suggested discriminators, reusable
     win themes, capture questions, and proposal risks tied to company gaps.
-    The verdict also surfaces as a card on the **Briefing** tab. With an empty
+    The verdict also surfaces as a card on the **Briefing** tab.     With an empty
     Company Profile it still runs on Customer DNA, but flags
     `seller_data_complete = false` and labels every fit claim as an assumption.
-11. **Intelligence Assistant tab** — start a thread. Try one of the suggested
+11. **Win Strategy tab (flagship)** — click **Generate Win Strategy**. This is
+    the gate-review deliverable. MissionIQ synthesizes Customer DNA, Company
+    DNA, opportunity documents, evaluation criteria, Capability Match, market
+    intelligence, and the Risk Register into an executive briefing:
+    - **Executive Pursuit Recommendation** (pursue / pursue-with-conditions /
+      no-bid) and a **Win Confidence** gauge (0–100)
+    - **Strengths · Weaknesses · Key Discriminators**, each tagged
+      **Evidence / Inference / Assumption** with source chips
+    - **Black Hat Assessment** (how a competitor attacks us + our counter)
+    - **Likely Evaluator Concerns · Win Themes · Competitive Assessment**
+    - **Critical Capture Actions** (immediate / near-term / pre-RFP)
+    Generate it with only Customer DNA to see it run on partial inputs (lower
+    confidence, `inputs_missing` banner), then generate the upstream modules
+    and regenerate to watch confidence rise and assumptions become evidence.
+    The recommendation also surfaces as the top card on the **Briefing** tab.
+12. **Intelligence Assistant tab** — start a thread. Try one of the suggested
    questions. Each answer carries a **Grounded** / **Insufficient context**
    status pill, lists source citations as `[1] [2] …` chips, and shows
    which model produced it. If you ask before any document is `ready`,
     the Assistant refuses *before* calling the LLM. The refusal is
     audit-logged as `chat.message.refused`.
-12. **Audit trail** — every user-visible action above produces an
+13. **Audit trail** — every user-visible action above produces an
     `audit_log` row (`document.uploaded`,
     `document.processing.parsing/chunking/embedding/ready/failed`,
     `ai.module.run`, `chat.message.received`, `chat.message.sent`,
@@ -316,6 +371,7 @@ npm run dev
 ✅ **Capture: Company DNA Profile** module — the seller-side mirror of Customer DNA (Core Capabilities · Past Performance · Contract Vehicles · Certifications · Technology Partners · Differentiators · Case Studies · Key Personnel · Footprint · Security Posture · Delivery Model · Pricing Posture), synthesized from the workspace Company Profile without requiring opportunity documents
 ✅ **Capture: Capability Match** module — senior-capture-lead fit assessment comparing Customer DNA × opportunity requirements × evaluation criteria × market intelligence × Company Profile, producing strong/weak fit, missing capabilities, required proof points, teaming recommendations, discriminators, win themes, capture questions, and company-gap proposal risks; refuses to overclaim when seller data is incomplete (`seller_data_complete = false`)
 ✅ **Seller-side Company Profile** expanded with contract vehicles, technology partners, case studies, key personnel, geographic footprint, security posture, delivery model, and pricing posture (editable on the Company Profile page); downstream modules optionally consume it (`consumes_company_profile`)
+✅ **Capture: Win Strategy** module (flagship) — gate-review synthesis of Customer DNA, Company DNA, opportunity documents, evaluation criteria, Capability Match, market intelligence, and risks into Executive Pursuit Recommendation, Strengths, Weaknesses, Key Discriminators, Black Hat Assessment, Likely Evaluator Concerns, Win Themes, Competitive Assessment, Critical Capture Actions, and a 0–100 Win Confidence call. Every point is tagged evidence / inference / assumption with cited sources; partial inputs dampen confidence rather than fabricate evidence
 ✅ **Intelligence Assistant** with hard grounding contract: refuses to call the LLM when no documents are indexed or retrieval returns no hits; every answer carries citations and a status pill
 ✅ SAM.gov market intelligence client + search + import + link-to-opportunity
 ✅ CSV exports (Compliance, Risks) — populated by the structured writeback path
@@ -324,7 +380,7 @@ npm run dev
 ✅ Platform shell with module-aware left nav and stubbed module groups
 ✅ Pages: Login, Signup, Dashboard, Workspaces, Opportunity list/detail, Documents, Module workbenches, Market Intelligence, Assistant
 ✅ Seed script with example opportunity + example documents
-✅ Unit tests for auth, workspace scoping, LLM router, RAG, document status state machine, Opportunity Summary contract, Customer DNA contract, the DNA-prerequisite enforcement for downstream modules, the Company DNA + Capability Match contracts, and the seller-data anti-overclaim guarantee
+✅ Unit tests for auth, workspace scoping, LLM router, RAG, document status state machine, Opportunity Summary contract, Customer DNA contract, the DNA-prerequisite enforcement for downstream modules, the Company DNA + Capability Match contracts, the seller-data anti-overclaim guarantee, and the Win Strategy synthesis contract (basis tagging + partial-input confidence dampening)
 
 📋 Remaining Capture modules (Requirement Breakdown, Win Themes, Staffing Assumptions, Proposal Outline, Market Intel Summary) — each follows the same ~80-line pattern as the modules already shipped.
 

@@ -318,3 +318,100 @@ class CapabilityMatchOutput(BaseModel):
     key_findings: list[str] = []
     recommended_actions: list[str] = []
     citations: list[dict] = []
+
+
+# ── Win Strategy Engine (flagship synthesis) ──
+# The culminating deliverable: a senior-capture-executive gate-review
+# assessment that synthesizes Customer DNA, Company DNA, opportunity
+# documents, evaluation criteria, Capability Match, market intelligence, and
+# the Risk Register into strategic recommendations — NOT a document summary.
+#
+# Every point declares an epistemic basis so a gate review can tell apart
+# what is proven from what is inferred from what is assumed.
+
+StrategicBasis = Literal["evidence", "inference", "assumption"]
+
+
+class StrategicPoint(BaseModel):
+    """A single strategic conclusion with its evidentiary basis.
+
+    ``sources`` cite the inputs that back the point, e.g.
+    ``"Customer DNA: mission"``, ``"Company DNA: differentiators"``,
+    ``"E2"`` (opportunity document evidence), ``"M1"`` (market intel).
+    """
+
+    statement: str
+    basis: StrategicBasis = "inference"
+    sources: list[str] = []
+
+
+class BlackHatPoint(BaseModel):
+    """A competitor's likely line of attack and our counter — the black-hat lens."""
+
+    competitor_move: str
+    impact: str
+    our_counter: str
+    basis: StrategicBasis = "inference"
+    sources: list[str] = []
+
+
+class CompetitorPosture(BaseModel):
+    name: str  # e.g. "Incumbent (Acme)", "Large prime", "Niche small business"
+    positioning: str
+    threat_level: Literal["low", "medium", "high"] = "medium"
+    our_response: str
+    basis: StrategicBasis = "inference"
+    sources: list[str] = []
+
+
+class CompetitiveAssessment(BaseModel):
+    summary: str
+    competitors: list[CompetitorPosture] = []
+
+
+class CaptureAction(BaseModel):
+    action: str
+    rationale: str
+    priority: Literal["immediate", "near_term", "pre_rfp"] = "near_term"
+    owner: str | None = None
+
+
+class WinConfidenceAssessment(BaseModel):
+    level: Literal["high", "medium", "low"] = "medium"
+    score: int = 50  # 0–100 estimated probability of win
+    rationale: str
+    key_drivers: list[str] = []
+
+
+class WinStrategyOutput(BaseModel):
+    """A gate-review-grade pursuit assessment. Synthesis, not summary."""
+
+    # 1. Executive Pursuit Recommendation
+    executive_pursuit_recommendation: str
+    pursuit_recommendation: Literal[
+        "pursue", "pursue_with_conditions", "no_bid"
+    ] = "pursue_with_conditions"
+
+    # 2–7
+    strengths: list[StrategicPoint] = []
+    weaknesses: list[StrategicPoint] = []
+    key_discriminators: list[StrategicPoint] = []
+    black_hat_assessment: list[BlackHatPoint] = []
+    likely_evaluator_concerns: list[StrategicPoint] = []
+    win_themes: list[StrategicPoint] = []
+
+    # 8. Competitive Assessment
+    competitive_assessment: CompetitiveAssessment
+
+    # 9. Critical Capture Actions
+    critical_capture_actions: list[CaptureAction] = []
+
+    # 10. Win Confidence Assessment
+    win_confidence_assessment: WinConfidenceAssessment
+
+    # Synthesis provenance: which upstream inputs were available
+    inputs_used: list[str] = []
+    inputs_missing: list[str] = []
+
+    key_findings: list[str] = []
+    citations: list[dict] = []

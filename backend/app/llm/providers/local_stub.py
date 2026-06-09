@@ -84,6 +84,13 @@ def _build_skeleton(user_prompt: str) -> dict:
     # and a generic "executive_summary" fallback.
 
     if (
+        "executive_pursuit_recommendation" in lower
+        and "black_hat_assessment" in lower
+        and "win_confidence_assessment" in lower
+    ):
+        return _win_strategy_skeleton(evidence_refs, dna, user_prompt)
+
+    if (
         "win_assessment" in lower
         and "fit_score" in lower
         and "strong_fit_areas" in lower
@@ -350,6 +357,204 @@ def _company_dna_skeleton(seller_incomplete: bool) -> dict:
         ],
         "confidence": "medium",
         "profile_completeness": "partial",
+    }
+
+
+def _win_strategy_skeleton(
+    evidence_refs: list[dict], dna: dict | None, user_prompt: str
+) -> dict:
+    e1 = evidence_refs[0]["ref"] if evidence_refs else "E1"
+    e2 = evidence_refs[1]["ref"] if len(evidence_refs) > 1 else e1
+    mission = (dna or {}).get("mission") if dna else None
+    mission_src = "Customer DNA: mission"
+
+    company_missing = "no seller-side synthesis available" in user_prompt
+    cap_missing = "CAPABILITY MATCH: *** MISSING" in user_prompt
+    eval_missing = "EVALUATION CRITERIA: *** MISSING" in user_prompt
+    risk_missing = "RISK REGISTER: *** MISSING" in user_prompt
+
+    inputs_used = ["Customer DNA", "Opportunity Documents"]
+    inputs_missing: list[str] = []
+    (inputs_missing if company_missing else inputs_used).append("Company DNA")
+    (inputs_missing if cap_missing else inputs_used).append("Capability Match")
+    (inputs_missing if eval_missing else inputs_used).append("Evaluation Criteria")
+    (inputs_missing if risk_missing else inputs_used).append("Risk Register")
+
+    # Confidence is dampened when key seller-side inputs are missing.
+    if company_missing or cap_missing:
+        level, score = "low", 38
+        recommendation = "pursue_with_conditions"
+        rec_text = (
+            "[Stub] PURSUE WITH CONDITIONS. The customer need is real and aligns "
+            "with our lane, but seller-side synthesis is incomplete — complete "
+            "Company DNA and Capability Match before committing B&P."
+        )
+    else:
+        level, score = "medium", 58
+        recommendation = "pursue"
+        rec_text = (
+            "[Stub] PURSUE. Our mature mission-ops and security posture map "
+            f"directly to {mission or 'the customer mission'}, the incumbent is "
+            "beatable on modernization, and our discriminators are credible. The "
+            "gap to close is DHA-specific past performance, addressable via teaming."
+        )
+
+    return {
+        "executive_pursuit_recommendation": rec_text,
+        "pursuit_recommendation": recommendation,
+        "strengths": [
+            {
+                "statement": "Mature 24x7 mission-operations capability aligned to the core requirement.",
+                "basis": "evidence",
+                "sources": [e1, "Company DNA: core_capabilities"]
+                if not company_missing
+                else [e1],
+            },
+            {
+                "statement": "Security posture (FedRAMP/IL5) matches the customer's risk priorities.",
+                "basis": "inference",
+                "sources": [mission_src, "Customer DNA: risk_priorities"],
+            },
+        ],
+        "weaknesses": [
+            {
+                "statement": "Thin DHA-specific past performance relative to the incumbent.",
+                "basis": "inference" if not cap_missing else "assumption",
+                "sources": ["Capability Match"] if not cap_missing else [],
+            },
+            {
+                "statement": "Analytics is a developing, not mature, capability.",
+                "basis": "evidence" if not company_missing else "assumption",
+                "sources": ["Company DNA: core_capabilities"]
+                if not company_missing
+                else [],
+            },
+        ],
+        "key_discriminators": [
+            {
+                "statement": "SOC-embedded data engineering — operations and analytics under one roof.",
+                "basis": "inference",
+                "sources": ["Company DNA: differentiators", mission_src]
+                if not company_missing
+                else [mission_src],
+            },
+            {
+                "statement": "Demonstrated 45-day stand-up minimizes transition risk the customer fears.",
+                "basis": "evidence" if not company_missing else "assumption",
+                "sources": ["Company DNA: case_studies", "Customer DNA: risk_priorities"]
+                if not company_missing
+                else [],
+            },
+        ],
+        "black_hat_assessment": [
+            {
+                "competitor_move": "Incumbent claims continuity and 'no learning curve.'",
+                "impact": "Reframes our modernization edge as transition risk.",
+                "our_counter": "Lead with a zero-downtime transition plan and our 45-day stand-up proof point.",
+                "basis": "inference",
+                "sources": [f"{e2}", "Customer DNA: risk_priorities"],
+            },
+            {
+                "competitor_move": "Large prime out-prices on scale and bench depth.",
+                "impact": "Pressures our cost story and perceived capacity.",
+                "our_counter": "Position lean indirect rates + named SMEs as lower-risk value, not cheap.",
+                "basis": "inference",
+                "sources": ["M1"] if any(r["ref"].startswith("M") for r in evidence_refs) else [],
+            },
+        ],
+        "likely_evaluator_concerns": [
+            {
+                "statement": "Can a small business carry 24x7 mission scale without the incumbent?",
+                "basis": "inference",
+                "sources": ["Customer DNA: stakeholder_concerns", e1],
+            },
+        ],
+        "win_themes": [
+            {
+                "statement": "Mission continuity without disruption — modernization at zero operational risk.",
+                "basis": "inference",
+                "sources": [mission_src, "Customer DNA: risk_priorities"],
+            },
+            {
+                "statement": "Security-first operations aligned to the customer's compliance posture.",
+                "basis": "evidence",
+                "sources": [e1],
+            },
+        ],
+        "competitive_assessment": {
+            "summary": (
+                "[Stub] Incumbent is the primary threat on continuity; a large prime "
+                "threatens on scale/price. We win by reframing the decision around "
+                "modernization-at-low-risk rather than status quo."
+            ),
+            "competitors": [
+                {
+                    "name": "Incumbent",
+                    "positioning": "Continuity and institutional knowledge.",
+                    "threat_level": "high",
+                    "our_response": "Attack the status-quo cost of stagnation; prove low-risk transition.",
+                    "basis": "inference",
+                    "sources": ["Customer DNA: mission", e1],
+                },
+                {
+                    "name": "Large prime",
+                    "positioning": "Scale, bench depth, aggressive price.",
+                    "threat_level": "medium",
+                    "our_response": "Differentiate on agility, named SMEs, and mission focus.",
+                    "basis": "assumption",
+                    "sources": [],
+                },
+            ],
+        },
+        "critical_capture_actions": [
+            {
+                "action": "Secure a teaming partner with DHA-specific past performance.",
+                "rationale": "Closes our most exploitable weakness before the incumbent frames it.",
+                "priority": "immediate",
+                "owner": "Capture Lead",
+            },
+            {
+                "action": "Schedule customer meetings to validate transition concerns and decision drivers.",
+                "rationale": "Converts inferences and assumptions into evidence before bid decision.",
+                "priority": "near_term",
+                "owner": None,
+            },
+            {
+                "action": "Develop the zero-downtime transition proof package.",
+                "rationale": "Neutralizes the incumbent's strongest message.",
+                "priority": "pre_rfp",
+                "owner": "Solution Architect",
+            },
+        ],
+        "win_confidence_assessment": {
+            "level": level,
+            "score": score,
+            "rationale": (
+                "[Stub] Strong capability and mission alignment, offset by past-"
+                "performance gap and incumbent continuity advantage."
+                + (
+                    " Confidence is dampened because key seller-side synthesis "
+                    "inputs are missing."
+                    if (company_missing or cap_missing)
+                    else ""
+                )
+            ),
+            "key_drivers": [
+                "Capability/mission alignment (+)",
+                "Incumbent continuity advantage (−)",
+                "DHA past-performance gap (−)",
+            ],
+        },
+        "inputs_used": inputs_used,
+        "inputs_missing": inputs_missing,
+        "key_findings": [
+            "[Stub] Winnable as a modernization play; not winnable as a price play.",
+            "[Stub] Teaming for DHA past performance is the single highest-leverage move.",
+        ],
+        "citations": [
+            {"evidence_ref": ref["ref"], "claim": "Supports win-strategy assessment."}
+            for ref in evidence_refs[:4]
+        ],
     }
 
 

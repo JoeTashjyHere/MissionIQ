@@ -65,6 +65,11 @@ def get_registry() -> ModuleRegistry:
         CapabilityMatchModule,
     )
 
+    # Flagship synthesis — reads every upstream module
+    from app.intelligence.modules.capture.win_strategy import (  # noqa: E402
+        WinStrategyModule,
+    )
+
     registry.register(CustomerDnaModule)
     registry.register(CompanyDnaModule)
     registry.register(OpportunitySummaryModule)
@@ -72,4 +77,5 @@ def get_registry() -> ModuleRegistry:
     registry.register(EvaluationCriteriaModule)
     registry.register(RiskRegisterModule)
     registry.register(CapabilityMatchModule)
+    registry.register(WinStrategyModule)
     return registry

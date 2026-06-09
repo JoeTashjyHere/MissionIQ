@@ -8,6 +8,7 @@ import type {
   CapabilityMatchOutput,
   CustomerDnaProfile,
   OpportunityOverview,
+  WinStrategyOutput,
 } from "@/lib/types";
 import { PageHeader } from "@/components/PageHeader";
 import { KpiCard } from "@/components/ds/KpiCard";
@@ -33,11 +34,19 @@ export default function OpportunityBriefingPage({
   const [overview, setOverview] = useState<OpportunityOverview | null>(null);
   const [dna, setDna] = useState<AIOutput | null | undefined>(undefined);
   const [match, setMatch] = useState<AIOutput | null | undefined>(undefined);
+  const [strategy, setStrategy] = useState<AIOutput | null | undefined>(
+    undefined,
+  );
 
   useEffect(() => {
     apiRequest<OpportunityOverview>(`/opportunities/${opportunityId}/overview`)
       .then(setOverview)
       .catch(() => setOverview(null));
+    apiRequest<AIOutput | null>(
+      `/opportunities/${opportunityId}/modules/capture.win_strategy/latest`,
+    )
+      .then((r) => setStrategy(r ?? null))
+      .catch(() => setStrategy(null));
     apiRequest<AIOutput | null>(
       `/opportunities/${opportunityId}/modules/capture.customer_dna/latest`,
     )
@@ -112,6 +121,10 @@ export default function OpportunityBriefingPage({
         />
       </div>
 
+      <WinStrategySnapshotCard
+        opportunityId={opportunityId}
+        strategy={strategy}
+      />
       <DnaSnapshotCard opportunityId={opportunityId} dna={dna} />
       <CapabilityMatchSnapshotCard
         opportunityId={opportunityId}
@@ -304,6 +317,105 @@ function DnaSnapshotCard({
             </StatusPill>
           </div>
         )}
+      </CardBody>
+    </Card>
+  );
+}
+
+const PURSUIT_LABEL: Record<string, string> = {
+  pursue: "Pursue",
+  pursue_with_conditions: "Pursue with Conditions",
+  no_bid: "No-Bid",
+};
+
+function WinStrategySnapshotCard({
+  opportunityId,
+  strategy,
+}: {
+  opportunityId: string;
+  strategy: AIOutput | null | undefined;
+}) {
+  const href = `/capture/opportunities/${opportunityId}/win-strategy`;
+
+  if (strategy === undefined) {
+    return (
+      <div className="mb-6">
+        <Skeleton className="h-28" />
+      </div>
+    );
+  }
+
+  if (strategy === null || strategy.status !== "ok") {
+    return (
+      <Card className="mb-6 border-steel-700/40 bg-gradient-to-br from-steel-700/[0.06] to-transparent">
+        <CardBody>
+          <div className="flex items-start gap-4">
+            <div className="rounded-md bg-steel-700/10 text-steel-700 p-2">
+              <Sparkles className="h-5 w-5" />
+            </div>
+            <div className="flex-1">
+              <div className="miq-eyebrow">Flagship deliverable</div>
+              <h3 className="text-h3 text-charcoal-900 mt-1">
+                Generate the Win Strategy
+              </h3>
+              <p className="text-[13.5px] text-charcoal-700 mt-1 max-w-2xl">
+                The gate-review assessment that synthesizes Customer DNA,
+                Company DNA, opportunity documents, evaluation criteria,
+                Capability Match, market intelligence, and risks into a pursuit
+                recommendation, black-hat view, competitive assessment, win
+                themes, capture actions, and a win-confidence call.
+              </p>
+            </div>
+            <Link href={href}>
+              <Button>Open Win Strategy</Button>
+            </Link>
+          </div>
+        </CardBody>
+      </Card>
+    );
+  }
+
+  const o = strategy.output_json as unknown as WinStrategyOutput;
+  const conf = o.win_confidence_assessment;
+  const pursuitTone =
+    o.pursuit_recommendation === "pursue"
+      ? "green"
+      : o.pursuit_recommendation === "no_bid"
+        ? "red"
+        : "amber";
+  const confTone =
+    conf?.level === "high" ? "green" : conf?.level === "low" ? "red" : "amber";
+  return (
+    <Card className="mb-6 border-steel-700/40">
+      <CardHeader
+        eyebrow="Win Strategy · Flagship deliverable"
+        title="Gate-review recommendation"
+        actions={
+          <Link href={href}>
+            <Button size="sm" variant="secondary">
+              Open full strategy
+            </Button>
+          </Link>
+        }
+      />
+      <CardBody>
+        <div className="flex items-center gap-2 mb-3">
+          <StatusPill tone={pursuitTone}>
+            {PURSUIT_LABEL[o.pursuit_recommendation] ??
+              o.pursuit_recommendation}
+          </StatusPill>
+          {conf && (
+            <StatusPill tone={confTone}>
+              Win confidence: {conf.score}% ({conf.level})
+            </StatusPill>
+          )}
+          {(o.inputs_missing?.length ?? 0) > 0 && (
+            <StatusPill tone="amber">Partial inputs</StatusPill>
+          )}
+        </div>
+        <p className="text-[14.5px] text-charcoal-900 leading-relaxed">
+          {o.executive_pursuit_recommendation || "—"}
+        </p>
       </CardBody>
     </Card>
   );
