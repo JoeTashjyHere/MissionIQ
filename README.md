@@ -307,6 +307,61 @@ pages: **Connectors** (catalog + configuration + sync/test/disable),
 errors), and **Connector Health** (KPI banner, per-connector health, and
 pursuit automation runs with per-step status and one-click retry).
 
+### Outcome Intelligence & Win/Loss Learning
+
+The closed learning loop: **MissionIQ becomes smarter as more pursuits are
+completed.** Recording what actually happened to a pursuit feeds every future
+recommendation — without ever claiming causation. The platform reports only
+**Observed Patterns**, **Historical Correlations**, and **Supporting
+Evidence**.
+
+**Outcome capture** (`pursuit_outcome`) — the terminal lifecycle artifact for a
+pursuit: won · lost · no-bid · cancelled · withdrawn, plus decision date, award
+value, the winning competitor on losses, debrief factors, and notes. Recording
+an outcome (a one-minute form on the pursuit page) moves the pursuit to its
+terminal capture stage, runs the entire learning loop in one audited
+transaction, and is freely revisable or deletable (the loop recomputes back to
+neutral).
+
+**Recommendation performance** (`recommendation_outcome`) — when an outcome is
+recorded, MissionIQ snapshots what it had recommended for that pursuit (the
+Bid/No-Bid call, the Gate Review recommendation and PWin, the Win Strategy
+win-confidence score, the Executive Brief recommendation) and computes
+**alignment** with the recorded outcome. Alignment is explicitly a historical
+correlation — never a causal accuracy claim — and is undefined (`NULL`) where
+it has no meaning (cancelled/withdrawn pursuits). A calibration view buckets
+win-confidence predictions against observed win rates.
+
+**Knowledge Graph outcome weighting** — every graph entity (win themes,
+discriminators, risks, technologies, capabilities, agencies, competitors)
+carries `wins` / `losses` / `win_rate` / `outcome_weight`, recomputed
+idempotently from the provenance-stamped edges whenever an outcome changes.
+`outcome_weight` is the Laplace-smoothed win rate `(wins+1)/(wins+losses+2)` —
+0.5 means "no signal", and a single lucky win cannot dominate. Only decided
+competitions (won/lost) count; no-bids never pollute win rates.
+
+**Memory integration — the loop closes itself.** Historical memory items now
+carry a track record ("3W–1L · 75% historical win rate"), surface it in the
+Memory tab UI, rank by outcome weight on frequency ties, and flow it into the
+compact memory context that **every** `consumes_memory` module (Win Strategy,
+Executive Brief, Gate Review, Bid/No-Bid) already receives — those modules got
+outcome-aware without a single change to their own code.
+
+**`capture.outcome_intelligence` module** — answers *"what does our track
+record mean for THIS pursuit?"*: relevant win patterns, loss patterns to
+pre-empt, agency and competitor track records, and strategic recommendations —
+every statement tagged Evidence / Inference / Assumption, with a hard
+NEVER-CLAIM-CAUSATION prompt rule and an honest empty state when no outcomes
+exist yet (it refuses to invent a track record).
+
+**Outcome Intelligence dashboard** (`/outcomes`, in the Memory section) — the
+deterministic, no-LLM workspace analysis: KPI banner (decided pursuits, win
+rate, value won, recommendation alignment), Win/Loss pattern analysis with
+per-pursuit source chips, debrief factor frequencies, Agency / Capability /
+Competitor trends (including "awards taken" per competitor), recommendation
+performance + win-confidence calibration, deterministic strategic
+observations, and the full recorded-outcome ledger.
+
 ---
 
 ## Architecture Documents
@@ -551,6 +606,12 @@ npm run dev
 ✅ **Pursuit Automation Orchestrator** — declarative step plan (pursuit ready → documents settled → market intel association → Customer DNA → Company DNA → Capability Match → Win Strategy → Executive Brief) with per-step retries, critical-step abort preserving the DNA dependency chain, partial-failure semantics, honest handling of `insufficient_context`, resumable retry from the first failed step, and a full audit trail
 ✅ **Data provenance** — `source_type` / `source_connector_id` / `source_external_id` on opportunities and documents plus a `ProvenanceBadge` rendering the five platform provenance categories (User Uploaded · Connector Ingested · Public Market Intelligence · Historical Memory · Generated Intelligence) across the UI
 ✅ **Integrations observability** — Connectors (catalog + configure + sync/test/disable), Sync History (live-polling job table with progress, stats, durations, errors), and Connector Health (KPI banner, per-connector health, automation runs with per-step status dots and one-click retry)
+✅ **Outcome capture** — `pursuit_outcome` (won · lost · no-bid · cancelled · withdrawn + decision date, award value, winning competitor, debrief factors, notes) recorded from the pursuit page in one audited transaction that moves the terminal capture stage, snapshots recommendations, and recomputes graph weighting; fully revisable/deletable with clean recompute
+✅ **Recommendation performance** — `recommendation_outcome` snapshots of the Bid/No-Bid call, Gate Review recommendation/PWin, Win Strategy confidence, and Executive Brief recommendation vs. the recorded outcome, with alignment computed as an explicit historical correlation (never causal accuracy) and a win-confidence calibration view
+✅ **Knowledge Graph outcome weighting** — `wins` / `losses` / `win_rate` / `outcome_weight` on every graph entity, recomputed idempotently from provenance-stamped edges; Laplace-smoothed weighting so small samples cannot dominate; decided competitions only (no-bids never pollute win rates)
+✅ **Outcome-aware memory** — historical memory items carry track records ("3W–1L · 75% historical win rate") in the Memory tab and in the compact memory context consumed by every `consumes_memory` module, so Win Strategy and the briefings became outcome-aware with zero changes to their own code
+✅ **Capture: Outcome Intelligence** module — what the recorded track record means for THIS pursuit (relevant win/loss patterns, agency + competitor track records, strategic recommendations), with a hard never-claim-causation prompt rule and an honest empty state when no outcomes exist
+✅ **Outcome Intelligence dashboard** (`/outcomes`) — deterministic workspace analysis: KPIs, win/loss patterns with source-pursuit chips, debrief factor frequencies, agency/capability/competitor trends (incl. awards taken), recommendation performance + calibration, strategic observations, and the recorded-outcome ledger
 ✅ **Intelligence Assistant** with hard grounding contract: refuses to call the LLM when no documents are indexed or retrieval returns no hits; every answer carries citations and a status pill
 ✅ SAM.gov market intelligence client + search + import + link-to-opportunity
 ✅ CSV exports (Compliance, Risks) — populated by the structured writeback path
@@ -559,7 +620,7 @@ npm run dev
 ✅ Platform shell with module-aware left nav and stubbed module groups
 ✅ Pages: Login, Signup, Dashboard, Workspaces, Opportunity list/detail, Documents, Module workbenches, Market Intelligence, Assistant
 ✅ Seed script with example opportunity + example documents
-✅ Unit tests for auth, workspace scoping, LLM router, RAG, document status state machine, Opportunity Summary contract, Customer DNA contract, the DNA-prerequisite enforcement for downstream modules, the Company DNA + Capability Match contracts, the seller-data anti-overclaim guarantee, the Win Strategy synthesis contract (basis tagging + partial-input confidence dampening + Pursuit Memory consumption), the Memory/Knowledge-Graph layer (fact extraction, entity normalization/dedup, similarity scoring, and Historical/Current/Inference basis classification), and the Executive Briefings & Gate Reviews contracts (registration/flags, decision-not-summary prompts, schema-valid stub output, Historical Evidence from memory, and partial-input confidence dampening), plus the Connectors & Automation contracts (provider registry and phase/extension-point guarantees, deterministic mock providers, real Local Repository discovery with path-escape protection, credential encryption round-trips, sync/automation state-machine and migration drift checks, and the orchestrator's retry / critical-abort / partial-failure / resume / epistemic-honesty semantics)
+✅ Unit tests for auth, workspace scoping, LLM router, RAG, document status state machine, Opportunity Summary contract, Customer DNA contract, the DNA-prerequisite enforcement for downstream modules, the Company DNA + Capability Match contracts, the seller-data anti-overclaim guarantee, the Win Strategy synthesis contract (basis tagging + partial-input confidence dampening + Pursuit Memory consumption), the Memory/Knowledge-Graph layer (fact extraction, entity normalization/dedup, similarity scoring, and Historical/Current/Inference basis classification), and the Executive Briefings & Gate Reviews contracts (registration/flags, decision-not-summary prompts, schema-valid stub output, Historical Evidence from memory, and partial-input confidence dampening), plus the Connectors & Automation contracts (provider registry and phase/extension-point guarantees, deterministic mock providers, real Local Repository discovery with path-escape protection, credential encryption round-trips, sync/automation state-machine and migration drift checks, and the orchestrator's retry / critical-abort / partial-failure / resume / epistemic-honesty semantics), and the Outcome Intelligence contracts (outcome vocabulary + migration drift, Laplace weighting math, alignment rules across all recommendation types and outcomes, calibration bucketing, decided-only entity records, no-causal-language assertions on patterns and observations, memory track-record propagation, and the outcome module's honest no-history behavior)
 
 📋 Remaining Capture modules (Requirement Breakdown, Win Themes, Staffing Assumptions, Proposal Outline, Market Intel Summary) — each follows the same ~80-line pattern as the modules already shipped.
 

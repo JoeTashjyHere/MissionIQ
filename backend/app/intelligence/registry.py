@@ -36,8 +36,9 @@ def get_registry() -> ModuleRegistry:
     """
     registry = ModuleRegistry()
 
-    # Synthesis steps (read by everything else)
-    from app.intelligence.modules.capture.customer_dna import (  # noqa: E402
+    # Synthesis steps (read by everything else). The import block is kept in
+    # registration order (it mirrors the UI), not alphabetical order.
+    from app.intelligence.modules.capture.customer_dna import (  # noqa: E402, I001
         CustomerDnaModule,
     )
     from app.intelligence.modules.capture.company_dna import (  # noqa: E402
@@ -78,6 +79,12 @@ def get_registry() -> ModuleRegistry:
         GateReviewModule,
     )
 
+    # Outcome Intelligence — applies the recorded win/loss track record to the
+    # current pursuit (the closed learning loop).
+    from app.intelligence.modules.capture.outcome_intelligence import (  # noqa: E402
+        OutcomeIntelligenceModule,
+    )
+
     registry.register(CustomerDnaModule)
     registry.register(CompanyDnaModule)
     registry.register(OpportunitySummaryModule)
@@ -89,4 +96,5 @@ def get_registry() -> ModuleRegistry:
     registry.register(ExecutiveBriefModule)
     registry.register(GateReviewModule)
     registry.register(BidDecisionModule)
+    registry.register(OutcomeIntelligenceModule)
     return registry

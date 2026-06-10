@@ -66,7 +66,21 @@ function ItemRow({ item }: { item: MemoryItem }) {
     <div className="border-b border-charcoal-100 py-3 last:border-0">
       <div className="flex items-start justify-between gap-3">
         <p className="text-[13.5px] text-charcoal-900">{item.label}</p>
-        <BasisChip basis={item.basis} />
+        <div className="flex items-center gap-1.5">
+          {item.track_record && (
+            <span
+              title="Decided-pursuit track record — a historical correlation, never a causal claim."
+              className={`rounded-full px-2 py-0.5 text-[10.5px] font-medium ${
+                (item.win_rate ?? 0.5) >= 0.5
+                  ? "bg-status-greenBg text-status-green"
+                  : "bg-status-redBg text-status-red"
+              }`}
+            >
+              {item.track_record}
+            </span>
+          )}
+          <BasisChip basis={item.basis} />
+        </div>
       </div>
       <div className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-[11.5px] text-charcoal-500">
         {item.frequency > 0 && (

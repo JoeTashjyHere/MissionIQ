@@ -92,6 +92,20 @@ class GraphEntity(UUIDPkMixin, TimestampMixin, Base):
     normalized_key: Mapped[str] = mapped_column(String(400), nullable=False)
     attributes: Mapped[dict] = mapped_column(JSONB, nullable=False, default=dict)
     mention_count: Mapped[int] = mapped_column(Integer, nullable=False, default=1)
+    # Outcome weighting (Outcome Intelligence): counts of decided pursuits
+    # (won / lost only) this entity was linked to, the raw historical win
+    # rate, and a Laplace-smoothed weight (wins+1)/(wins+losses+2). These are
+    # historical correlation priors — descriptive, never causal.
+    wins: Mapped[int] = mapped_column(
+        Integer, nullable=False, default=0, server_default="0"
+    )
+    losses: Mapped[int] = mapped_column(
+        Integer, nullable=False, default=0, server_default="0"
+    )
+    win_rate: Mapped[float | None] = mapped_column(Float)
+    outcome_weight: Mapped[float] = mapped_column(
+        Float, nullable=False, default=1.0, server_default="1.0"
+    )
     first_seen_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False, server_default=func.now()
     )

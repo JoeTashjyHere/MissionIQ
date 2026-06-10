@@ -589,3 +589,28 @@ class BidDecisionOutput(BaseModel):
     inputs_used: list[str] = []
     inputs_missing: list[str] = []
     citations: list[dict] = []
+
+
+# ── Outcome Intelligence (capture.outcome_intelligence) ──
+
+
+class OutcomeIntelligenceOutput(BaseModel):
+    """What the organization's win/loss track record means for THIS pursuit.
+
+    Hard epistemic rule: track records are observed patterns and historical
+    correlations. The module reports what was observed and what it implies as
+    clearly-labeled inference — it never claims a pattern *caused* a win or
+    loss.
+    """
+
+    outcome_context_summary: str = ""
+    relevant_win_patterns: list[StrategicPoint] = []
+    relevant_loss_patterns: list[StrategicPoint] = []
+    agency_track_record: list[StrategicPoint] = []
+    competitor_track_record: list[StrategicPoint] = []
+    strategic_recommendations: list[CaptureAction] = []
+    confidence: Confidence
+    historical_evidence: HistoricalEvidence = Field(default_factory=HistoricalEvidence)
+    inputs_used: list[str] = []
+    inputs_missing: list[str] = []
+    citations: list[dict] = []

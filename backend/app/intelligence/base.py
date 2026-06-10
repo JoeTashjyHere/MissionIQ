@@ -52,7 +52,6 @@ from app.llm.prompt_library import PromptLibrary
 from app.llm.router import LLMRouter
 from app.models import AIOutput, Capability, CompanyProfile, Opportunity
 
-
 CUSTOMER_DNA_MODULE_ID = "capture.customer_dna"
 
 
@@ -234,11 +233,22 @@ class BaseIntelligenceModule:
             return None
 
         def _hist(items: Any) -> list[dict[str, Any]]:
-            return [
-                {"label": i.label, "frequency": i.frequency, "basis": i.basis}
-                for i in items
-                if i.basis == "historical"
-            ]
+            out = []
+            for i in items:
+                if i.basis != "historical":
+                    continue
+                item: dict[str, Any] = {
+                    "label": i.label,
+                    "frequency": i.frequency,
+                    "basis": i.basis,
+                }
+                # Outcome Intelligence: decided-pursuit track record (a
+                # historical correlation) so reports can weight recalled
+                # knowledge by what actually happened.
+                if getattr(i, "track_record", None):
+                    item["track_record"] = i.track_record
+                out.append(item)
+            return out
 
         compact = {
             "summary": pm.summary,

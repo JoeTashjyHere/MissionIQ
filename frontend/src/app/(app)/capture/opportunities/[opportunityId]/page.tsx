@@ -17,6 +17,7 @@ import { StatusPill } from "@/components/ds/StatusPill";
 import { Button } from "@/components/ds/Button";
 import { ProvenanceBadge } from "@/components/ds/ProvenanceBadge";
 import { Skeleton } from "@/components/ds/Skeleton";
+import { OutcomeCard } from "@/components/outcomes/RecordOutcome";
 import { Sparkles } from "lucide-react";
 import {
   captureStageLabel,
@@ -124,6 +125,17 @@ export default function OpportunityBriefingPage({
           helper={`${overview.risk_count} total`}
         />
       </div>
+
+      <OutcomeCard
+        opportunityId={opportunityId}
+        onChanged={() =>
+          apiRequest<OpportunityOverview>(
+            `/opportunities/${opportunityId}/overview`,
+          )
+            .then(setOverview)
+            .catch(() => undefined)
+        }
+      />
 
       <BriefingsLauncher opportunityId={opportunityId} />
 

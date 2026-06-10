@@ -83,6 +83,10 @@ def _build_skeleton(user_prompt: str) -> dict:
     # Order matters only for disambiguation between the DNA producer prompt
     # and a generic "executive_summary" fallback.
 
+    # Outcome Intelligence first — its schema key is unique to this module.
+    if "outcome_context_summary" in lower:
+        return _outcome_intelligence_skeleton(evidence_refs, user_prompt)
+
     # Briefing modules first — they embed upstream field names as inputs, so we
     # disambiguate on their own unique schema keys before the win-strategy check.
     if "opportunity_snapshot" in lower and "executive_recommendation" in lower:
@@ -619,6 +623,161 @@ def _historical_evidence(present: bool) -> dict:
         "historical_risks": ["[Stub] Aggressive transition timeline"],
         "historical_discriminators": ["[Stub] Cleared 24x7 SOC bench"],
         "agency_patterns": ["[Stub] Agency consistently weights past performance heavily"],
+    }
+
+
+def _outcome_intelligence_skeleton(
+    evidence_refs: list[dict], user_prompt: str
+) -> dict:
+    """capture.outcome_intelligence — track-record synthesis for this pursuit.
+
+    Honors the module's hard epistemic rules: when the prompt flags OUTCOME
+    ANALYSIS as missing, the skeleton says so, records the missing input, and
+    dampens confidence instead of inventing a track record. Pattern language
+    is observational ("appeared in ... pursuits"), never causal.
+    """
+    history_missing = "no pursuit outcomes recorded yet" in user_prompt
+    memory = _memory_present(user_prompt)
+    e1 = evidence_refs[0]["ref"] if evidence_refs else "E1"
+
+    if history_missing:
+        return {
+            "outcome_context_summary": (
+                "[Stub] No pursuit outcomes have been recorded yet, so there is "
+                "no organizational track record to apply to this pursuit. "
+                "Record outcomes as pursuits close to activate this analysis."
+            ),
+            "relevant_win_patterns": [],
+            "relevant_loss_patterns": [],
+            "agency_track_record": [],
+            "competitor_track_record": [],
+            "strategic_recommendations": [
+                {
+                    "action": "Record win/loss outcomes for completed pursuits.",
+                    "rationale": (
+                        "Outcome capture is the input that powers win/loss "
+                        "pattern analysis and recommendation calibration."
+                    ),
+                    "priority": "near_term",
+                    "owner": "Capture Lead",
+                },
+            ],
+            "confidence": {
+                "level": "low",
+                "score": 20,
+                "rationale": (
+                    "[Stub] No recorded outcome history — analysis would be "
+                    "assumption-only, so confidence is held low."
+                ),
+            },
+            "historical_evidence": _historical_evidence(memory),
+            "inputs_used": ["Opportunity Documents"] if evidence_refs else [],
+            "inputs_missing": ["outcome_history"],
+            "citations": [],
+        }
+
+    return {
+        "outcome_context_summary": (
+            "[Stub] Observed pattern: the organization's recorded outcomes show "
+            "a decided-pursuit track record relevant to this opportunity's "
+            "agency, win themes, and competitive field. Statements below are "
+            "historical correlations, not causal claims."
+        ),
+        "relevant_win_patterns": [
+            {
+                "statement": (
+                    "Observed pattern: win theme 'Mission continuity without "
+                    "disruption' appeared in prior won pursuit(s) and is "
+                    "applicable to this scope."
+                ),
+                "basis": "evidence",
+                "sources": ["Outcome Analysis", "Pursuit Memory"],
+            },
+            {
+                "statement": (
+                    "Carrying the historically strongest discriminators into "
+                    "this pursuit's win strategy is supported by their track "
+                    "record — an inference from correlation, not causation."
+                ),
+                "basis": "inference",
+                "sources": ["Outcome Analysis"],
+            },
+        ],
+        "relevant_loss_patterns": [
+            {
+                "statement": (
+                    "Historical correlation: transition-timeline risk appeared "
+                    "in lost pursuit(s); the same risk is present here."
+                ),
+                "basis": "evidence",
+                "sources": ["Outcome Analysis", e1],
+            },
+        ],
+        "agency_track_record": [
+            {
+                "statement": (
+                    "Observed pattern: prior decided pursuits at this agency "
+                    "form the closest available outcome baseline for this bid."
+                ),
+                "basis": "evidence",
+                "sources": ["Outcome Analysis"],
+            },
+        ],
+        "competitor_track_record": [
+            {
+                "statement": (
+                    "Historical correlation: recorded losses where a named "
+                    "competitor took the award flag them as the primary threat "
+                    "to plan against here."
+                ),
+                "basis": "inference",
+                "sources": ["Outcome Analysis"],
+            },
+        ],
+        "strategic_recommendations": [
+            {
+                "action": (
+                    "Lead with the win themes carrying the strongest recorded "
+                    "track record."
+                ),
+                "rationale": (
+                    "Observed pattern: these themes appeared predominantly in "
+                    "won pursuits — reuse is low-risk, though correlation does "
+                    "not guarantee outcome."
+                ),
+                "priority": "immediate",
+                "owner": "Capture Lead",
+            },
+            {
+                "action": (
+                    "Pre-empt the loss-correlated risks recorded on prior "
+                    "pursuits in this pursuit's mitigation plan."
+                ),
+                "rationale": (
+                    "Historical correlation: these risks recurred in losses; "
+                    "addressing them early removes a known pattern."
+                ),
+                "priority": "near_term",
+                "owner": "Capture Lead",
+            },
+        ],
+        "confidence": {
+            "level": "medium",
+            "score": 55,
+            "rationale": (
+                "[Stub] Grounded in recorded outcomes, but track records are "
+                "correlations over a small sample — confidence is capped "
+                "accordingly."
+            ),
+        },
+        "historical_evidence": _historical_evidence(memory),
+        "inputs_used": ["Outcome History", "Pursuit Memory"]
+        + (["Opportunity Documents"] if evidence_refs else []),
+        "inputs_missing": [],
+        "citations": [
+            {"evidence_ref": ref["ref"], "claim": "Supports outcome relevance."}
+            for ref in evidence_refs[:3]
+        ],
     }
 
 

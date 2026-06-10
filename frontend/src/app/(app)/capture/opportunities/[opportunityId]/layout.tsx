@@ -12,6 +12,7 @@ const TABS = [
   { slug: "bid-decision", label: "Bid / No-Bid", emphasis: true },
   { slug: "win-strategy", label: "Win Strategy", emphasis: true },
   { slug: "memory", label: "Memory", emphasis: true },
+  { slug: "outcome-intel", label: "Outcome Intel", emphasis: true },
   { slug: "documents", label: "Documents" },
   { slug: "customer-dna", label: "Customer DNA", emphasis: true },
   { slug: "company-dna", label: "Company DNA", emphasis: true },

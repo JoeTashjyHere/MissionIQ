@@ -29,6 +29,14 @@ class MemoryItem(BaseModel):
     frequency: int = 1  # number of opportunities referencing this item
     source_opportunities: list[SourceOpportunity] = []
     attributes: dict = {}
+    # Outcome Intelligence: decided-pursuit track record for this item (a
+    # historical correlation, never a causal claim). All zeros / None until
+    # outcomes are recorded.
+    wins: int = 0
+    losses: int = 0
+    win_rate: float | None = None
+    outcome_weight: float = 1.0
+    track_record: str | None = None  # e.g. "3W–1L · 75% historical win rate"
 
 
 class SimilarOpportunity(BaseModel):

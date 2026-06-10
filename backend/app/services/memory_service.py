@@ -119,6 +119,12 @@ class ItemOccurrence:
     opportunity_id: uuid.UUID
     opportunity_name: str
     attributes: dict = field(default_factory=dict)
+    # Outcome Intelligence: the entity's decided-pursuit track record
+    # (historical correlation, never causal). Defaults mean "no signal".
+    wins: int = 0
+    losses: int = 0
+    win_rate: float | None = None
+    outcome_weight: float = 1.0
 
 
 @dataclass
@@ -129,6 +135,10 @@ class AggregatedItem:
     frequency: int
     sources: list[tuple[uuid.UUID, str]]
     attributes: dict
+    wins: int = 0
+    losses: int = 0
+    win_rate: float | None = None
+    outcome_weight: float = 1.0
 
 
 def aggregate_memory_items(
@@ -167,11 +177,34 @@ def aggregate_memory_items(
                 frequency=len(prior_ids) if prior_ids else len(opp_ids),
                 sources=sources,
                 attributes=display.attributes,
+                wins=display.wins,
+                losses=display.losses,
+                win_rate=display.win_rate,
+                outcome_weight=display.outcome_weight,
             )
         )
 
-    items.sort(key=lambda i: (i.basis != "historical", -i.frequency, i.label.lower()))
+    # Historical first, then by frequency with the Laplace-smoothed outcome
+    # weight as a tiebreaker — proven items surface above unproven ones.
+    items.sort(
+        key=lambda i: (
+            i.basis != "historical",
+            -i.frequency,
+            -i.outcome_weight,
+            i.label.lower(),
+        )
+    )
     return items
+
+
+def format_track_record(
+    wins: int, losses: int, win_rate: float | None
+) -> str | None:
+    """Display string for an item's decided-pursuit track record."""
+    if wins + losses == 0:
+        return None
+    rate = f" · {round(win_rate * 100)}% historical win rate" if win_rate is not None else ""
+    return f"{wins}W–{losses}L{rate}"
 
 
 def _to_memory_item(agg: AggregatedItem) -> MemoryItem:
@@ -184,6 +217,11 @@ def _to_memory_item(agg: AggregatedItem) -> MemoryItem:
             SourceOpportunity(id=oid, name=name) for oid, name in agg.sources
         ],
         attributes=agg.attributes or {},
+        wins=agg.wins,
+        losses=agg.losses,
+        win_rate=agg.win_rate,
+        outcome_weight=agg.outcome_weight,
+        track_record=format_track_record(agg.wins, agg.losses, agg.win_rate),
     )
 
 
@@ -252,6 +290,10 @@ def _occurrences_for_relation(
                 opportunity_id=e.opportunity_id,
                 opportunity_name=opp.name,
                 attributes=e.attributes or ent.attributes or {},
+                wins=ent.wins,
+                losses=ent.losses,
+                win_rate=ent.win_rate,
+                outcome_weight=ent.outcome_weight,
             )
         )
     return out
@@ -408,6 +450,16 @@ def _build_inferences(
             f"{len(similar)} similar prior opportunit{'y' if len(similar) == 1 else 'ies'} "
             "found — reuse their discriminators and proven risk mitigations rather than starting cold."
         )
+    # Outcome Intelligence correlations: surface decided-pursuit track records
+    # as historical correlations (observed, never causal).
+    for item in prior_win_themes + prior_risks:
+        if item.basis == "historical" and item.wins + item.losses >= 2:
+            out.append(
+                f"Historical correlation: {item.entity_type or 'item'} "
+                f"'{item.label}' appeared in {item.wins} won and {item.losses} "
+                "lost pursuit(s) — an observed pattern, not a causal claim."
+            )
+            break
     return out
 
 

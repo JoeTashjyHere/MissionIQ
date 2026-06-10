@@ -455,6 +455,13 @@ export interface MemoryItem {
   frequency: number;
   source_opportunities: SourceOpportunity[];
   attributes: Record<string, unknown>;
+  // Outcome Intelligence: decided-pursuit track record (historical
+  // correlation, never causal). Zeros / null until outcomes are recorded.
+  wins?: number;
+  losses?: number;
+  win_rate?: number | null;
+  outcome_weight?: number;
+  track_record?: string | null;
 }
 
 export interface SimilarOpportunity {
@@ -783,4 +790,134 @@ export interface AutomationRun {
   connector_sync_job_id: Uuid | null;
   created_at: string;
   opportunity_name: string | null;
+}
+
+// ── Outcome Intelligence & Win/Loss Learning ───────────────────────────────
+
+export type PursuitOutcomeKind =
+  | "won"
+  | "lost"
+  | "no_bid"
+  | "cancelled"
+  | "withdrawn";
+
+export interface RecommendationOutcome {
+  id: Uuid;
+  module_id: string;
+  recommendation_type:
+    | "bid_decision"
+    | "gate_recommendation"
+    | "win_confidence"
+    | "executive_recommendation";
+  predicted_label: string | null;
+  predicted_score: number | null;
+  aligned: boolean | null;
+  ai_output_id: Uuid | null;
+}
+
+export interface PursuitOutcome {
+  id: Uuid;
+  workspace_id: Uuid;
+  opportunity_id: Uuid;
+  outcome: PursuitOutcomeKind;
+  decided_at: string | null;
+  awarded_value_cents: number | null;
+  awarded_to_competitor: string | null;
+  outcome_factors: string[] | null;
+  debrief_notes: string | null;
+  created_at: string;
+  updated_at: string;
+  opportunity_name: string | null;
+  agency: string | null;
+  recommendation_outcomes: RecommendationOutcome[];
+}
+
+export interface SourcePursuit {
+  id: Uuid;
+  name: string;
+  outcome: string;
+}
+
+/** An observed pattern: an entity's track record across decided pursuits.
+ *  `observation` is descriptive — a historical correlation, never causal. */
+export interface OutcomePattern {
+  label: string;
+  entity_type: string;
+  wins: number;
+  losses: number;
+  win_rate: number | null;
+  outcome_weight: number;
+  observation: string;
+  decided_value_cents: number | null;
+  awards_taken: number | null;
+  source_pursuits: SourcePursuit[];
+}
+
+export interface FactorFrequency {
+  factor: string;
+  in_wins: number;
+  in_losses: number;
+}
+
+export interface RecommendationPerformance {
+  recommendation_type: string;
+  module_id: string;
+  total: number;
+  aligned: number;
+  alignment_rate: number | null;
+}
+
+export interface CalibrationBucket {
+  range_label: string;
+  predictions: number;
+  observed_wins: number;
+  observed_win_rate: number | null;
+  avg_predicted_score: number | null;
+}
+
+export interface StrategicObservation {
+  observation: string;
+  kind: "observed_pattern" | "historical_correlation";
+  sources: string[];
+}
+
+export interface OutcomeSummary {
+  recorded: number;
+  decided: number;
+  wins: number;
+  losses: number;
+  win_rate: number | null;
+  no_bids: number;
+  value_won_cents: number;
+  recommendation_alignment_rate: number | null;
+}
+
+export interface OutcomeIntelligenceReport {
+  summary: OutcomeSummary;
+  win_patterns: OutcomePattern[];
+  loss_patterns: OutcomePattern[];
+  factor_frequencies: FactorFrequency[];
+  agency_trends: OutcomePattern[];
+  capability_trends: OutcomePattern[];
+  competitor_trends: OutcomePattern[];
+  recommendation_performance: RecommendationPerformance[];
+  calibration: CalibrationBucket[];
+  strategic_observations: StrategicObservation[];
+}
+
+// capture.outcome_intelligence module output
+export interface OutcomeIntelligenceOutput {
+  outcome_context_summary: string;
+  relevant_win_patterns: StrategicPoint[];
+  relevant_loss_patterns: StrategicPoint[];
+  agency_track_record: StrategicPoint[];
+  competitor_track_record: StrategicPoint[];
+  strategic_recommendations: CaptureAction[];
+  confidence: Confidence;
+  historical_evidence: HistoricalEvidence;
+  inputs_used: string[];
+  inputs_missing: string[];
+  citations: { evidence_ref?: string; claim?: string }[];
+  __stub__?: boolean;
+  _notice?: string;
 }

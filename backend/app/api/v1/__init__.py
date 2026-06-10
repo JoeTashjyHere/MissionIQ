@@ -14,6 +14,7 @@ from app.api.v1 import (
     memory,
     modules,
     opportunities,
+    outcomes,
     users,
     workspaces,
 )
@@ -36,3 +37,4 @@ api_router.include_router(chat.router, prefix="/chat", tags=["chat"])
 api_router.include_router(exports.router, tags=["exports"])
 api_router.include_router(connectors.router, tags=["connectors"])
 api_router.include_router(automation.router, tags=["automation"])
+api_router.include_router(outcomes.router, tags=["outcomes"])

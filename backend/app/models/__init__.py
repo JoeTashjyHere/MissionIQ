@@ -27,6 +27,7 @@ from app.models.market_intel import (
     OpportunityMarketIntelLink,
 )
 from app.models.opportunity import Opportunity
+from app.models.outcome import PursuitOutcome, RecommendationOutcome
 from app.models.user import RefreshToken, User
 from app.models.workspace import TeamMember, Workspace
 
@@ -52,6 +53,8 @@ __all__ = [
     "MarketIntelSource",
     "Opportunity",
     "OpportunityMarketIntelLink",
+    "PursuitOutcome",
+    "RecommendationOutcome",
     "RefreshToken",
     "Risk",
     "TeamMember",

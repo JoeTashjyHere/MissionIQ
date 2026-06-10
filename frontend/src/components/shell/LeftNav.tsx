@@ -76,6 +76,9 @@ function buildSections(oppBase: string | null): NavSection[] {
         { label: "Similar Opportunities", href: `${cap("memory")}#similar` },
         { label: "Agency Intelligence", href: `${cap("memory")}#agency` },
         { label: "Knowledge Graph", href: `${cap("memory")}#graph` },
+        { label: "Outcome Intelligence", href: "/outcomes" },
+        { label: "Win/Loss Analysis", href: "/outcomes#winloss" },
+        { label: "Recommendation Performance", href: "/outcomes#recommendations" },
       ],
     },
     {
