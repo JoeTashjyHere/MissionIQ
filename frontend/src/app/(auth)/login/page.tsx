@@ -11,7 +11,7 @@ import { ApiError } from "@/lib/api";
 export default function LoginPage() {
   const router = useRouter();
   const { login } = useAuth();
-  const [email, setEmail] = useState("demo@missioniq.dev");
+  const [email, setEmail] = useState("sarah.mitchell@apexfederal.demo");
   const [password, setPassword] = useState("MissionIQ!Demo2026");
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
@@ -70,6 +70,12 @@ export default function LoginPage() {
           Sign in
         </Button>
       </form>
+      <p className="mt-4 text-[12.5px] text-charcoal-500 bg-charcoal-50 border border-charcoal-200 rounded-md px-3 py-2.5">
+        <span className="font-medium text-charcoal-700">Demo showcase:</span>{" "}
+        sarah.mitchell@apexfederal.demo / MissionIQ!Demo2026 — Apex Federal
+        Solutions workspace with pursuits, outcomes, and proposal intelligence
+        pre-loaded.
+      </p>
       <p className="mt-6 text-[13px] text-charcoal-500">
         Need an account?{" "}
         <Link href="/signup" className="font-medium">

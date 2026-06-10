@@ -1,4 +1,10 @@
-"""Idempotent seed script. Run with: python -m seeds.seed --if-empty"""
+"""Idempotent seed script.
+
+Run:
+  python -m seeds.seed --if-empty          # legacy minimal demo
+  python -m seeds.seed --apex              # Apex Federal showcase (recommended)
+  python -m seeds.seed --apex --if-empty   # skip if apex workspace exists
+"""
 from __future__ import annotations
 
 import argparse
@@ -239,9 +245,24 @@ def main() -> None:
         action="store_true",
         help="Skip seeding when a demo user already exists.",
     )
+    parser.add_argument(
+        "--apex",
+        action="store_true",
+        help="Load the Apex Federal Solutions showcase environment.",
+    )
     args = parser.parse_args()
     try:
-        asyncio.run(seed(if_empty=args.if_empty))
+        if args.apex:
+            from seeds.apex.seed import load_apex_workspace
+
+            info = asyncio.run(load_apex_workspace(if_empty=args.if_empty))
+            print(
+                f"\nApex Federal showcase ready.\n"
+                f"Login: {info['email']} / {info['password']}\n"
+                f"Workspace: {info['workspace']}\n"
+            )
+        else:
+            asyncio.run(seed(if_empty=args.if_empty))
     except KeyboardInterrupt:
         sys.exit(130)
 

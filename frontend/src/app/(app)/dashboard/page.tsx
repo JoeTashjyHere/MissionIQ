@@ -12,12 +12,15 @@ import { DataTable } from "@/components/ds/DataTable";
 import { StatusPill } from "@/components/ds/StatusPill";
 import { Button } from "@/components/ds/Button";
 import { Skeleton } from "@/components/ds/Skeleton";
-import { Target } from "lucide-react";
+import { Sparkles, Target } from "lucide-react";
+import { hasCapability } from "@/lib/governance";
 import { captureStageLabel, daysUntil, formatCurrencyCents, formatDate } from "@/lib/format";
 
 export default function DashboardPage() {
-  const { currentWorkspaceId, memberships } = useAuth();
+  const { currentWorkspaceId, memberships, setCurrentWorkspaceId } = useAuth();
   const [opps, setOpps] = useState<Opportunity[] | null>(null);
+  const [loadingDemo, setLoadingDemo] = useState(false);
+  const [demoMessage, setDemoMessage] = useState<string | null>(null);
 
   useEffect(() => {
     if (!currentWorkspaceId) return;
@@ -27,6 +30,36 @@ export default function DashboardPage() {
   }, [currentWorkspaceId]);
 
   const current = memberships.find((m) => m.workspace_id === currentWorkspaceId);
+  const canLoadDemo = memberships.some((m) =>
+    hasCapability(m.role, "workspace.manage"),
+  );
+
+  const loadDemo = async () => {
+    setLoadingDemo(true);
+    setDemoMessage(null);
+    try {
+      const resp = await apiRequest<{
+        message: string;
+        workspace_id: string | null;
+        workspace_slug: string;
+      }>("/demo/load", { method: "POST" });
+      if (resp.workspace_id) {
+        setCurrentWorkspaceId(resp.workspace_id);
+      }
+      setDemoMessage(resp.message);
+      if (currentWorkspaceId || resp.workspace_id) {
+        const ws = resp.workspace_id ?? currentWorkspaceId;
+        const rows = await apiRequest<Opportunity[]>(
+          `/workspaces/${ws}/opportunities?limit=10`,
+        );
+        setOpps(rows);
+      }
+    } catch (err: unknown) {
+      setDemoMessage(err instanceof Error ? err.message : "Demo load failed.");
+    } finally {
+      setLoadingDemo(false);
+    }
+  };
 
   const total = opps?.length ?? 0;
   const dueSoon = opps?.filter((o) => {
@@ -48,11 +81,28 @@ export default function DashboardPage() {
         title={current?.workspace_name ?? "Workspace"}
         subtitle="A briefing-level view of your operational intelligence."
         actions={
-          <Link href="/capture/opportunities/new">
-            <Button>New opportunity</Button>
-          </Link>
+          <div className="flex items-center gap-2">
+            {canLoadDemo && (
+              <Button
+                variant="secondary"
+                loading={loadingDemo}
+                onClick={loadDemo}
+              >
+                <Sparkles className="h-4 w-4 mr-1.5" aria-hidden />
+                Load Demo Workspace
+              </Button>
+            )}
+            <Link href="/capture/opportunities/new">
+              <Button>New opportunity</Button>
+            </Link>
+          </div>
         }
       />
+      {demoMessage && (
+        <div className="mb-6 rounded-md border border-steel-200 bg-steel-50 px-4 py-3 text-[13px] text-charcoal-800">
+          {demoMessage}
+        </div>
+      )}
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
         <KpiCard label="Opportunities Tracked" value={total} helper="In this workspace" />

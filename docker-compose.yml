@@ -10,7 +10,7 @@ services:
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-missioniq_dev_password}
       POSTGRES_DB: ${POSTGRES_DB:-missioniq}
     ports:
-      - "127.0.0.1:5432:5432"
+      - "127.0.0.1:5433:5432"
     volumes:
       - missioniq_pgdata:/var/lib/postgresql/data
     healthcheck:
@@ -40,7 +40,7 @@ services:
     command: >
       sh -c "
         alembic upgrade head &&
-        python -m seeds.seed --if-empty &&
+        python -m seeds.seed --apex --if-empty &&
         uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
       "
 
