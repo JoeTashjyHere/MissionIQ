@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import clsx from "clsx";
 import {
+  BookOpen,
   Brain,
   Globe2,
   LayoutGrid,
@@ -64,6 +65,20 @@ function buildSections(oppBase: string | null): NavSection[] {
         { label: "Executive Brief", href: cap("executive-brief") },
         { label: "Gate Review", href: cap("gate-review") },
         { label: "Bid / No-Bid Decision", href: cap("bid-decision") },
+      ],
+    },
+    {
+      id: "knowledge",
+      label: "Knowledge",
+      icon: BookOpen,
+      phase: "Improve",
+      items: [
+        { label: "Proposal Repository", href: "/knowledge" },
+        { label: "Past Performance Library", href: "/knowledge/past-performance" },
+        { label: "Win Theme Library", href: "/knowledge/win-themes" },
+        { label: "Staffing Library", href: "/knowledge/staffing" },
+        { label: "Transition Library", href: "/knowledge/transition" },
+        { label: "Executive Summary Library", href: "/knowledge/executive-summaries" },
       ],
     },
     {

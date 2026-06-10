@@ -929,6 +929,110 @@ export interface OutcomeIntelligenceOutput {
   _notice?: string;
 }
 
+// ── Proposal Intelligence Repository ───────────────────────────────────────
+
+export type ProposalAssetType =
+  | "executive_summary"
+  | "win_theme"
+  | "staffing_approach"
+  | "transition_approach"
+  | "management_approach"
+  | "technical_approach"
+  | "past_performance"
+  | "risk_mitigation"
+  | "discriminator"
+  | "pricing_narrative"
+  | "lessons_learned"
+  | "custom";
+
+export interface ProposalAsset {
+  id: Uuid;
+  workspace_id: Uuid;
+  asset_type: ProposalAssetType | string;
+  title: string;
+  summary: string;
+  content: Record<string, unknown>;
+  document_id: Uuid;
+  document_name: string | null;
+  opportunity_id: Uuid | null;
+  opportunity_name: string | null;
+  agency: string | null;
+  customer_name: string | null;
+  submission_date: string | null;
+  outcome: string | null;
+  author: string | null;
+  version: string | null;
+  source_type: string;
+  tags: string[];
+  extraction_confidence: string;
+  extraction_basis: string;
+  wins: number;
+  losses: number;
+  usage_count: number;
+  win_rate: number | null;
+  outcome_weight: number;
+  track_record: string | null;
+  last_used_at: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface AssetCitation {
+  id: Uuid;
+  document_id: Uuid;
+  document_name: string | null;
+  chunk_id: Uuid | null;
+  page_start: number | null;
+  page_end: number | null;
+  section_path: string | null;
+  excerpt: string;
+}
+
+export interface AssetUsage {
+  opportunity_id: Uuid;
+  opportunity_name: string | null;
+  usage_kind: string;
+  outcome: string | null;
+  created_at: string;
+}
+
+export interface ProposalAssetDetail extends ProposalAsset {
+  citations: AssetCitation[];
+  usages: AssetUsage[];
+  similar_assets: ProposalAsset[];
+}
+
+export interface AssetPattern {
+  asset_id: Uuid;
+  title: string;
+  asset_type: string;
+  agency: string | null;
+  wins: number;
+  losses: number;
+  usage_count: number;
+  win_rate: number | null;
+  outcome_weight: number;
+  observation: string;
+  source_pursuits: string[];
+}
+
+export interface RepositorySummary {
+  total_assets: number;
+  pursuits_with_assets: number;
+  assets_with_outcome_signal: number;
+  avg_win_rate: number | null;
+}
+
+export interface ProposalIntelligenceReport {
+  summary: RepositorySummary;
+  top_win_themes: AssetPattern[];
+  top_transition_approaches: AssetPattern[];
+  top_staffing_approaches: AssetPattern[];
+  top_executive_summaries: AssetPattern[];
+  agency_patterns: AssetPattern[];
+  historical_observations: string[];
+}
+
 // ── Collaboration & Governance ───────────────────────────────────────────────
 
 export type CommentStatus = "open" | "resolved";

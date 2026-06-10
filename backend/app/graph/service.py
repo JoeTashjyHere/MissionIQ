@@ -152,6 +152,24 @@ async def ingest_opportunity_base(
     )
 
 
+async def ingest_proposal_bundle(
+    db: AsyncSession,
+    *,
+    workspace_id: uuid.UUID,
+    opportunity_id: uuid.UUID,
+    module_id: str,
+    bundle: FactBundle,
+) -> int:
+    """Ingest proposal-extraction graph facts (idempotent per provenance)."""
+    return await _persist(
+        db,
+        workspace_id=workspace_id,
+        opportunity_id=opportunity_id,
+        module_id=module_id,
+        bundle=bundle,
+    )
+
+
 async def ingest_module_output(
     db: AsyncSession,
     *,

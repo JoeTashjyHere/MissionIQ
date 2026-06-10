@@ -146,6 +146,7 @@ def _render(prompt_id: str, *, full: bool, memory: dict | None = None):
         evaluation_criteria=_EVAL if full else None,
         risk_register=_RISK if full else None,
         win_strategy=_WIN_STRATEGY if full else None,
+        proposal_repository=None,
     )
     return user
 

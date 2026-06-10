@@ -118,6 +118,7 @@ def _evidence() -> list[_FakeEvidence]:
 
 def _render(prompt_id, evidence, *, company_profile, seller_incomplete, **extra):
     prompts = get_prompt_library()
+    extra.setdefault("proposal_repository", None)
     _, user, _ = prompts.render(
         prompt_id,
         "v1",

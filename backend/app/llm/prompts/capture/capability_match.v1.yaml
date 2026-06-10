@@ -114,6 +114,15 @@ user: |
   {% endfor %}
   {% endif %}
 
+  {% if proposal_repository %}
+  PROPOSAL REPOSITORY (reusable win themes / staffing / transition — Historical Evidence)
+  ────────────────────────────────────────────────────────────────────────────────────
+  {% for a in proposal_repository.historical_assets %}
+    - [{{ a.asset_type }}] {{ a.title }} — {{ a.summary[:200] }}{% if a.track_record %} ({{ a.track_record }}){% endif %}
+  {% endfor %}
+  Fold proven narratives into reusable_win_themes when supported. Observed patterns only.
+  {% endif %}
+
   OPPORTUNITY REQUIREMENTS (evidence)
   ───────────────────────────────────
   {% if evidence %}

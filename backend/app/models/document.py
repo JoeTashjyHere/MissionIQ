@@ -33,6 +33,8 @@ DOC_TYPES = (
     "past_performance",
     "capture_notes",
     "internal_solution",
+    "proposal",
+    "proposal_volume",
     "other",
 )
 

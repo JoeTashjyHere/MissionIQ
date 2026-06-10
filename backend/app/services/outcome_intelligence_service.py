@@ -305,6 +305,9 @@ async def record_outcome(
 
     await _snapshot_recommendations(db, outcome=po)
     await recompute_graph_outcomes(db, workspace_id=opportunity.workspace_id)
+    from app.services.proposal_repository_service import sync_asset_outcomes_from_opportunity
+
+    await sync_asset_outcomes_from_opportunity(db, opportunity_id=opportunity.id)
 
     await write_audit(
         db,
@@ -331,6 +334,9 @@ async def delete_outcome(
     await db.delete(existing)
     await db.flush()
     await recompute_graph_outcomes(db, workspace_id=opportunity.workspace_id)
+    from app.services.proposal_repository_service import sync_asset_outcomes_from_opportunity
+
+    await sync_asset_outcomes_from_opportunity(db, opportunity_id=opportunity.id)
     await write_audit(
         db,
         action="outcome.deleted",

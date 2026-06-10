@@ -85,6 +85,10 @@ def get_registry() -> ModuleRegistry:
         OutcomeIntelligenceModule,
     )
 
+    from app.intelligence.modules.repository.proposal_intelligence import (  # noqa: E402
+        ProposalIntelligenceModule,
+    )
+
     registry.register(CustomerDnaModule)
     registry.register(CompanyDnaModule)
     registry.register(OpportunitySummaryModule)
@@ -97,4 +101,5 @@ def get_registry() -> ModuleRegistry:
     registry.register(GateReviewModule)
     registry.register(BidDecisionModule)
     registry.register(OutcomeIntelligenceModule)
+    registry.register(ProposalIntelligenceModule)
     return registry

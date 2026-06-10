@@ -83,6 +83,14 @@ def _build_skeleton(user_prompt: str) -> dict:
     # Order matters only for disambiguation between the DNA producer prompt
     # and a generic "executive_summary" fallback.
 
+    # Proposal asset extraction — unique schema block.
+    if '"assets":' in lower and "asset_type" in lower and "document_summary" in lower:
+        return _proposal_extract_skeleton(evidence_refs)
+
+    # Proposal Intelligence repository synthesis.
+    if "query_summary" in lower and "reusable_recommendations" in lower:
+        return _proposal_intelligence_skeleton(user_prompt)
+
     # Outcome Intelligence first — its schema key is unique to this module.
     if "outcome_context_summary" in lower:
         return _outcome_intelligence_skeleton(evidence_refs, user_prompt)
@@ -623,6 +631,96 @@ def _historical_evidence(present: bool) -> dict:
         "historical_risks": ["[Stub] Aggressive transition timeline"],
         "historical_discriminators": ["[Stub] Cleared 24x7 SOC bench"],
         "agency_patterns": ["[Stub] Agency consistently weights past performance heavily"],
+    }
+
+
+def _proposal_extract_skeleton(evidence_refs: list[dict]) -> dict:
+    """proposal.extract_assets — structured intelligence extraction."""
+    excerpt = (
+        evidence_refs[0]["snippet"][:240]
+        if evidence_refs
+        else "Stub excerpt from proposal document."
+    )
+    return {
+        "document_summary": "[Stub] Proposal document indexed for asset extraction.",
+        "inputs_missing": [],
+        "assets": [
+            {
+                "asset_type": "transition_approach",
+                "title": "Phased transition with shadow period",
+                "summary": (
+                    "A 90-day phased transition with parallel operations and "
+                    "knowledge transfer checkpoints."
+                ),
+                "content": {"phases": ["shadow", "shared", "lead"]},
+                "confidence": "medium",
+                "basis": "evidence",
+                "tags": ["transition", "stub"],
+                "citations": [{"excerpt": excerpt, "page_start": 1, "page_end": 2}],
+            },
+            {
+                "asset_type": "win_theme",
+                "title": "Mission continuity and zero disruption",
+                "summary": "Emphasizes uninterrupted service delivery during transition.",
+                "content": {},
+                "confidence": "medium",
+                "basis": "evidence",
+                "tags": ["win_theme"],
+                "citations": [{"excerpt": excerpt, "page_start": 3}],
+            },
+        ],
+    }
+
+
+def _proposal_intelligence_skeleton(user_prompt: str) -> dict:
+    """repository.proposal_intelligence — observed pattern synthesis."""
+    thin = "total assets: 0" in user_prompt.lower()
+    return {
+        "query_summary": (
+            "[Stub] No proposal assets indexed yet."
+            if thin
+            else "[Stub] Recalled transition and win-theme assets with observed outcome patterns."
+        ),
+        "relevant_assets": []
+        if thin
+        else [
+            {
+                "asset_id": "00000000-0000-0000-0000-000000000001",
+                "title": "Phased transition with shadow period",
+                "asset_type": "transition_approach",
+                "agency": "CMS",
+                "wins": 2,
+                "losses": 1,
+                "usage_count": 4,
+                "win_rate": 0.667,
+                "outcome_weight": 0.5,
+                "observation": (
+                    "'Phased transition with shadow period' appeared in 2 won and "
+                    "1 lost pursuit(s) (67% historical win rate)."
+                ),
+                "source_pursuits": ["CMS Operations Support"],
+            }
+        ],
+        "agency_patterns": []
+        if thin
+        else ["CMS pursuits show recurring phased-transition narratives."],
+        "historical_observations": []
+        if thin
+        else [
+            "Observed pattern: phased transition narratives appear in multiple "
+            "decided pursuits. Historical correlation only — not causation."
+        ],
+        "reusable_recommendations": [
+            "Index historical proposal volumes to populate the repository."
+            if thin
+            else (
+                "[Historical Evidence] Consider the phased transition narrative "
+                "that appeared in 2 wins and 1 loss — adapt language, do not copy."
+            )
+        ],
+        "confidence": "low" if thin else "medium",
+        "inputs_missing": ["proposal_repository_assets"] if thin else [],
+        "citations": [],
     }
 
 

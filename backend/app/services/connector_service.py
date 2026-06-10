@@ -480,6 +480,9 @@ async def _ingest_document(
     data = await provider.fetch_document(
         config=connector.config, secret=secret, ref=ext_doc
     )
+    doc_type = ext_doc.doc_type
+    if ext_doc.ingest_mode == "proposal_repository" and doc_type in ("other", ""):
+        doc_type = "proposal"
     doc = await document_service.upload_document(
         db,
         workspace_id=connector.workspace_id,
@@ -488,7 +491,7 @@ async def _ingest_document(
         filename=ext_doc.filename,
         mime_type=ext_doc.mime_type,
         data=data,
-        doc_type=ext_doc.doc_type,
+        doc_type=doc_type,
         source_type="connector",
         source_connector_id=connector.id,
         source_external_id=ext_doc.external_id,

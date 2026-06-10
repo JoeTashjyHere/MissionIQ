@@ -64,6 +64,7 @@ class WinStrategyModule(BaseIntelligenceModule):
     # themes recalled from similar pursuits are folded in as Historical
     # Evidence so the strategy gets sharper with every opportunity processed.
     consumes_memory = True
+    consumes_proposal_repository = True
 
     async def extra_context(
         self, *, ctx: RAGContext, customer_dna: dict[str, Any] | None

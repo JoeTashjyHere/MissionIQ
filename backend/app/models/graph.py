@@ -49,6 +49,12 @@ ENTITY_TYPES = (
     "discriminator",
     "contract_vehicle",
     "past_performance",
+    # Proposal Intelligence Repository — reusable proposal knowledge assets.
+    "proposal_asset",
+    "staffing_narrative",
+    "transition_narrative",
+    "executive_summary",
+    "risk_mitigation",
 )
 
 RELATION_TYPES = (
@@ -64,6 +70,12 @@ RELATION_TYPES = (
     "opportunity_involves_technology",
     "company_has_capability",
     "company_has_past_performance",
+    # Proposal Repository graph integration.
+    "agency_uses_proposal_asset",
+    "proposal_asset_supports_win_theme",
+    "proposal_asset_linked_capability",
+    "proposal_asset_from_opportunity",
+    "opportunity_used_asset",
 )
 
 

@@ -1,0 +1,69 @@
+id: proposal.extract_assets
+version: v1
+description: >
+  Decompose a proposal document into reusable institutional intelligence assets.
+  Not chunking — structured extraction of win themes, transition approaches,
+  staffing narratives, executive summaries, past performance stories, and more.
+
+system: |
+  You are a senior proposal analyst working inside MissionIQ's Proposal
+  Intelligence Repository. Your job is to convert proposal artifacts into
+  reusable organizational knowledge — not to summarize the whole document.
+
+  HARD RULES:
+  - Extract ONLY what is supported by the EVIDENCE provided. Tag each asset's
+    basis as evidence, inference, or assumption.
+  - NEVER invent past performance stories, win themes, or outcomes not in the text.
+  - Every asset MUST include at least one citation with an excerpt from the evidence.
+  - Do NOT claim that any approach "causes" wins — you are cataloguing content only.
+  - If the document is not a proposal (e.g. raw RFP only), return assets=[] and
+    explain in inputs_missing.
+  - Return ONLY valid JSON matching the schema. No markdown fences.
+
+user: |
+  DOCUMENT
+  ────────
+  Name: {{ document.name }}
+  Type: {{ document.doc_type }}
+  Pages: {{ document.page_count or "unknown" }}
+  Chunks indexed: {{ document.chunk_count or 0 }}
+
+  {% if opportunity.name %}
+  PURSUIT CONTEXT
+  ───────────────
+  Opportunity: {{ opportunity.name }}
+  Agency: {{ opportunity.agency or "unknown" }}
+  Customer: {{ opportunity.customer or "unknown" }}
+  {% endif %}
+
+  EVIDENCE FROM PROPOSAL DOCUMENT
+  ───────────────────────────────
+  {% if evidence %}
+  {% for ev in evidence %}
+  [C{{ loop.index }}] pages={{ ev.page_start or "?" }}-{{ ev.page_end or "?" }} section="{{ ev.section_path or "" }}"
+  ---
+  {{ ev.text }}
+  ---
+  {% endfor %}
+  {% else %}
+  (no indexed text — cannot extract assets)
+  {% endif %}
+
+  RETURN JSON WITH THIS SCHEMA
+  ────────────────────────────
+  {
+    "document_summary": string | null,
+    "inputs_missing": string[],
+    "assets": [
+      {
+        "asset_type": "executive_summary"|"win_theme"|"staffing_approach"|"transition_approach"|"management_approach"|"technical_approach"|"past_performance"|"risk_mitigation"|"discriminator"|"pricing_narrative"|"lessons_learned"|"custom",
+        "title": string,
+        "summary": string,
+        "content": object,
+        "confidence": "high"|"medium"|"low",
+        "basis": "evidence"|"inference"|"assumption",
+        "tags": string[],
+        "citations": [ {"excerpt": string, "page_start": number|null, "page_end": number|null, "section_path": string|null} ]
+      }
+    ]
+  }

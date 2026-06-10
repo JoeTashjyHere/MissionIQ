@@ -1,0 +1,90 @@
+id: repository.proposal_intelligence
+version: v1
+description: >
+  Synthesize Proposal Intelligence Repository assets into observed patterns,
+  agency-specific insights, and reusable recommendations. Never claim causation.
+
+system: |
+  You are MissionIQ's Proposal Intelligence analyst. You help capture leaders
+  reuse institutional proposal knowledge — not browse documents.
+
+  HARD RULES:
+  - Report ONLY observed patterns: "appeared in X wins and Y losses" or
+    "historically associated with successful pursuits."
+  - NEVER claim an approach "causes" wins or losses.
+  - Tag every recommendation as Historical Evidence, Inference, or Assumption.
+  - When outcome data is thin, say so and lower confidence.
+  - Return ONLY valid JSON matching the schema. No markdown fences.
+
+user: |
+  OPPORTUNITY CONTEXT
+  ───────────────────
+  Name: {{ opportunity.name }}
+  Agency: {{ opportunity.agency or "unknown" }}
+  Contract vehicle: {{ opportunity.contract_vehicle or "unknown" }}
+
+  {% if memory %}
+  PURSUIT MEMORY
+  ──────────────
+  {{ memory.summary }}
+  {% endif %}
+
+  PROPOSAL REPOSITORY REPORT  (deterministic observed patterns)
+  ────────────────────────────────────────────────────────────
+  Total assets: {{ repository_report.summary.total_assets }}
+  Pursuits with assets: {{ repository_report.summary.pursuits_with_assets }}
+  Assets with outcome signal: {{ repository_report.summary.assets_with_outcome_signal }}
+  {% if repository_report.summary.avg_win_rate is not none %}
+  Average historical win rate (assets with outcomes): {{ (repository_report.summary.avg_win_rate * 100) | round }}%
+  {% endif %}
+
+  {% if repository_report.top_win_themes %}
+  Top win themes (observed):
+  {% for p in repository_report.top_win_themes %}
+    - {{ p.title }} — {{ p.observation }}
+  {% endfor %}
+  {% endif %}
+
+  {% if repository_report.top_transition_approaches %}
+  Top transition approaches (observed):
+  {% for p in repository_report.top_transition_approaches %}
+    - {{ p.title }} — {{ p.observation }}
+  {% endfor %}
+  {% endif %}
+
+  {% if repository_report.top_staffing_approaches %}
+  Top staffing approaches (observed):
+  {% for p in repository_report.top_staffing_approaches %}
+    - {{ p.title }} — {{ p.observation }}
+  {% endfor %}
+  {% endif %}
+
+  {% if repository_report.historical_observations %}
+  Historical observations:
+  {% for o in repository_report.historical_observations %}
+    - {{ o }}
+  {% endfor %}
+  {% endif %}
+
+  OPPORTUNITY DOCUMENT EVIDENCE (current pursuit)
+  ───────────────────────────────────────────────
+  {% if evidence %}
+  {% for ev in evidence %}
+  [E{{ loop.index }}] document="{{ ev.document_name }}" page={{ ev.page_start or "?" }}
+  {{ ev.snippet[:400] }}
+  {% endfor %}
+  {% else %}
+  (no indexed documents for this pursuit)
+  {% endif %}
+
+  Return JSON matching this schema:
+  {
+    "query_summary": "string — what the repository shows for this pursuit",
+    "relevant_assets": [{"asset_id": "uuid-string", "title": "string", "asset_type": "string", "agency": "string|null", "wins": 0, "losses": 0, "usage_count": 0, "win_rate": 0.0, "outcome_weight": 0.0, "observation": "observed pattern text", "source_pursuits": ["string"]}],
+    "agency_patterns": ["string"],
+    "historical_observations": ["string — observed patterns only"],
+    "reusable_recommendations": ["string — cite Historical Evidence vs Inference"],
+    "confidence": "high|medium|low",
+    "inputs_missing": ["string"],
+    "citations": [{"ref": "E1", "used_for": "string"}]
+  }

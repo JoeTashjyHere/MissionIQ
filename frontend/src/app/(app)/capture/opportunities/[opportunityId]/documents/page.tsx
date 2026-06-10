@@ -28,8 +28,12 @@ const DOC_TYPES = [
   "past_performance",
   "capture_notes",
   "internal_solution",
+  "proposal",
+  "proposal_volume",
   "other",
 ];
+
+const PROPOSAL_DOC_TYPES = new Set(["proposal", "proposal_volume"]);
 
 const STATUS_LABEL: Record<DocumentStatus, string> = {
   uploaded: "Queued",
@@ -71,6 +75,7 @@ export default function DocumentsPage({
   const [docType, setDocType] = useState("rfp");
   const [uploading, setUploading] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
+  const [extractingId, setExtractingId] = useState<string | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
 
   const refresh = async () => {
@@ -291,6 +296,32 @@ export default function DocumentsPage({
                   key: "uploaded",
                   header: "Uploaded",
                   render: (d) => formatDateTime(d.uploaded_at),
+                },
+                {
+                  key: "actions",
+                  header: "",
+                  render: (d) =>
+                    d.status === "ready" && PROPOSAL_DOC_TYPES.has(d.doc_type) ? (
+                      <button
+                        type="button"
+                        disabled={extractingId === d.id}
+                        onClick={async () => {
+                          setExtractingId(d.id);
+                          try {
+                            await apiRequest(
+                              `/opportunities/${opportunityId}/documents/${d.id}/extract-assets`,
+                              { method: "POST" },
+                            );
+                            await refresh();
+                          } finally {
+                            setExtractingId(null);
+                          }
+                        }}
+                        className="text-[12px] font-medium text-steel-700 hover:underline disabled:opacity-50"
+                      >
+                        {extractingId === d.id ? "Extracting…" : "Extract assets"}
+                      </button>
+                    ) : null,
                 },
               ]}
               rows={docs}

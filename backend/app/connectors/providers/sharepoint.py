@@ -67,6 +67,7 @@ class SharePointProvider(BaseConnectorProvider):
     phase: ClassVar[int] = 1
     provides_opportunities: ClassVar[bool] = False
     provides_documents: ClassVar[bool] = True
+    provides_proposal_archives: ClassVar[bool] = True
     config_fields: ClassVar[list[dict[str, Any]]] = [
         {
             "key": "site_url",

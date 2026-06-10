@@ -62,6 +62,9 @@ class ExternalDocument:
     # Fallback pursuit resolution for document repositories: the folder or
     # library name, matched against existing opportunity names.
     opportunity_name_hint: str | None = None
+    # When ``proposal_repository``, the sync engine tags the document as a
+    # proposal artifact so extraction runs after ingestion (SharePoint archives).
+    ingest_mode: str | None = None
 
 
 @dataclass
@@ -94,6 +97,9 @@ class BaseConnectorProvider(ABC):
     implemented: ClassVar[bool] = True
     provides_opportunities: ClassVar[bool] = False
     provides_documents: ClassVar[bool] = False
+    # True when the provider can discover historical proposal archives for the
+    # Proposal Intelligence Repository (extension point — not implemented here).
+    provides_proposal_archives: ClassVar[bool] = False
     requires_customer_authorization: ClassVar[bool] = False
     # Declarative form spec for the UI: [{key, label, placeholder, required}].
     config_fields: ClassVar[list[dict[str, Any]]] = []

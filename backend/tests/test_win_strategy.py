@@ -114,6 +114,7 @@ def _render(*, full: bool, memory: dict | None = None):
         capability_match=_CAP_MATCH if full else None,
         evaluation_criteria=_EVAL if full else None,
         risk_register=_RISK if full else None,
+        proposal_repository=None,
     )
     return user
 

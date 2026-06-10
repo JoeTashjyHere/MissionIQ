@@ -132,6 +132,11 @@ class BaseIntelligenceModule:
     # memory layer powers reports — recalled items should be cited as
     # "Historical Evidence" / "Pursuit Memory".
     consumes_memory: ClassVar[bool] = False
+    # If True, the orchestrator loads Proposal Repository intelligence (extracted
+    # win themes, transition approaches, staffing narratives, etc.) and passes
+    # it as ``proposal_repository``. Items are always Historical Evidence —
+    # observed patterns from prior pursuits, never causal claims.
+    consumes_proposal_repository: ClassVar[bool] = False
 
     def __init__(
         self,
@@ -270,6 +275,27 @@ class BaseIntelligenceModule:
             return None
         return compact
 
+    async def _load_proposal_repository_context(
+        self,
+        *,
+        ctx: RAGContext,
+        agency: str | None,
+    ) -> dict[str, Any] | None:
+        """Compact Proposal Repository view for prompt consumption."""
+        from app.services.proposal_repository_service import (
+            repository_context_for_opportunity,
+        )
+
+        pr = await repository_context_for_opportunity(
+            self.db,
+            workspace_id=ctx.workspace_id,
+            opportunity_id=ctx.opportunity_id,
+            agency=agency,
+        )
+        if not pr.get("historical_assets"):
+            return None
+        return pr
+
     async def extra_context(
         self, *, ctx: RAGContext, customer_dna: dict[str, Any] | None
     ) -> dict[str, Any]:
@@ -344,6 +370,13 @@ class BaseIntelligenceModule:
         if self.consumes_memory:
             memory = await self._load_pursuit_memory(ctx=ctx)
 
+        proposal_repository: dict[str, Any] | None = None
+        if self.consumes_proposal_repository:
+            proposal_repository = await self._load_proposal_repository_context(
+                ctx=ctx,
+                agency=opportunity.agency,
+            )
+
         # 5. Module-specific extra context (e.g. prior Evaluation Criteria)
         extra = await self.extra_context(ctx=ctx, customer_dna=customer_dna)
 
@@ -359,6 +392,7 @@ class BaseIntelligenceModule:
             company_profile=company_profile,
             seller_incomplete=seller_incomplete,
             memory=memory,
+            proposal_repository=proposal_repository,
             **extra,
         )
 

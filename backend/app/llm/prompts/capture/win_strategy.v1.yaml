@@ -178,6 +178,18 @@ user: |
   ground; nothing to recall.)
   {% endif %}
 
+  {% if proposal_repository %}
+  PROPOSAL REPOSITORY  (extracted institutional proposal intelligence — Historical Evidence)
+  ─────────────────────────────────────────────────────────────────────────────────────
+  {{ proposal_repository.asset_count }} reusable asset(s) recalled for this agency context.
+  {% for a in proposal_repository.historical_assets %}
+    - [{{ a.asset_type }}] {{ a.title }} — {{ a.summary }}{% if a.track_record %} ({{ a.track_record }}){% endif %}
+  {% endfor %}
+  Cite as "Historical Proposal Evidence". Observed patterns only — never causation.
+  {% else %}
+  PROPOSAL REPOSITORY: (no extracted proposal assets yet for this context.)
+  {% endif %}
+
   OPPORTUNITY DOCUMENT EVIDENCE
   ─────────────────────────────
   {% if evidence %}

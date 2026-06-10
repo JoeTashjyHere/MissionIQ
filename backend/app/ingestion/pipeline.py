@@ -19,6 +19,7 @@ from app.ingestion.extractors.base import extract
 from app.llm.router import get_llm_router
 from app.models import Document, DocumentChunk
 from app.models.document import DOC_STATUS_PROGRESS
+from app.services import proposal_extraction_service as extraction_service
 from app.services.audit_service import write_audit
 from app.storage import get_blob_store
 
@@ -116,6 +117,17 @@ async def process_document(*, db: AsyncSession, document_id: uuid.UUID) -> None:
             pages=doc.page_count,
             chunks=len(chunks),
         )
+        if extraction_service.should_extract(doc):
+            try:
+                await extraction_service.extract_proposal_assets(
+                    db,
+                    document_id=doc.id,
+                    actor_user_id=doc.uploaded_by_user_id,
+                )
+            except Exception:  # noqa: BLE001
+                logger.exception(
+                    "proposal extraction failed for document %s", doc.id
+                )
     except Exception as exc:  # noqa: BLE001
         doc.status = "failed"
         doc.progress_pct = DOC_STATUS_PROGRESS["failed"]

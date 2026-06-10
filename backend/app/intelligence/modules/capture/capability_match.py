@@ -56,6 +56,7 @@ class CapabilityMatchModule(BaseIntelligenceModule):
     minimum_evidence = 1
     requires_customer_dna = True
     consumes_company_profile = True
+    consumes_proposal_repository = True
 
     async def extra_context(
         self, *, ctx: RAGContext, customer_dna: dict[str, Any] | None

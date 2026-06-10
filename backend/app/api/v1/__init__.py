@@ -16,6 +16,7 @@ from app.api.v1 import (
     modules,
     opportunities,
     outcomes,
+    proposal_repository,
     users,
     workspaces,
 )
@@ -40,3 +41,4 @@ api_router.include_router(connectors.router, tags=["connectors"])
 api_router.include_router(automation.router, tags=["automation"])
 api_router.include_router(outcomes.router, tags=["outcomes"])
 api_router.include_router(governance.router, tags=["governance"])
+api_router.include_router(proposal_repository.router, tags=["proposal-repository"])
