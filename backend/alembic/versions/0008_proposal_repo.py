@@ -4,7 +4,7 @@ Decomposes proposal documents into reusable intelligence assets — not a file
 repository. Purely additive except extending document.doc_type and graph
 entity/relation CHECK constraints.
 
-Revision ID: 0008_proposal_intelligence_repository
+Revision ID: 0008_proposal_repo
 Revises: 0007_collaboration_governance
 """
 from __future__ import annotations
@@ -15,7 +15,7 @@ from sqlalchemy.dialects import postgresql
 
 from alembic import op
 
-revision = "0008_proposal_intelligence_repository"
+revision = "0008_proposal_repo"
 down_revision = "0007_collaboration_governance"
 branch_labels = None
 depends_on = None

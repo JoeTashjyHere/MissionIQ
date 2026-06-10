@@ -269,8 +269,10 @@ async def seed_proposal_assets(
             continue
 
         opp_id = None
+        agency_tokens = spec.get("agency", "").split()
+        agency_prefix = agency_tokens[0] if agency_tokens else ""
         for sol, oid in opportunity_map.items():
-            if spec.get("agency", "").split()[0] in sol or spec["title"] in sol:
+            if (agency_prefix and agency_prefix in sol) or spec["title"] in sol:
                 opp_id = oid
                 break
         if opp_id is None and opportunity_map:

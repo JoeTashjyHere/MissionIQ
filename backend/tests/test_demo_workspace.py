@@ -2,12 +2,14 @@
 from __future__ import annotations
 
 from app.intelligence import get_registry
+from app.models.opportunity import CAPTURE_STAGES
 from seeds.apex.constants import (
     DEMO_USERS,
     HISTORICAL_OUTCOMES,
     PROPOSAL_ASSETS,
     SHOWCASE_PURSUITS,
     WORKSPACE_SLUG,
+    capture_stage_for_pursuit,
 )
 from seeds.apex.payloads import MODULE_BUILDERS, build_payload
 
@@ -19,6 +21,21 @@ def test_showcase_pursuit_portfolio():
     assert len(completed) == 4
     assert len(active) == 2
     assert sum(1 for p in SHOWCASE_PURSUITS if p.flagship) == 1
+
+
+def test_showcase_capture_stages_are_valid():
+    for pursuit in SHOWCASE_PURSUITS:
+        assert pursuit.capture_stage in CAPTURE_STAGES
+        assert pursuit.capture_stage not in {"won", "no_bid"}
+        stage = capture_stage_for_pursuit(
+            outcome=pursuit.outcome, active_stage=pursuit.capture_stage
+        )
+        assert stage in CAPTURE_STAGES
+
+
+def test_historical_outcome_capture_stages_are_valid():
+    for outcome in HISTORICAL_OUTCOMES:
+        assert capture_stage_for_pursuit(outcome=outcome) in CAPTURE_STAGES
 
 
 def test_historical_outcomes_match_target_metrics():

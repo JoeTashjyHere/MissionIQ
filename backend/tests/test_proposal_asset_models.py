@@ -43,7 +43,7 @@ def test_graph_relations_include_proposal_repository():
 
 
 def test_migration_mentions_asset_types():
-    migration = Path(__file__).resolve().parents[1] / "alembic/versions/0008_proposal_intelligence_repository.py"
+    migration = Path(__file__).resolve().parents[1] / "alembic/versions/0008_proposal_repo.py"
     text = migration.read_text(encoding="utf-8")
     for t in ASSET_TYPES:
         assert t in text

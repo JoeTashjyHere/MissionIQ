@@ -23,6 +23,8 @@ from app.models import (
     User,
     Workspace,
 )
+from app.models.opportunity import CAPTURE_STAGES
+from app.services.outcome_intelligence_service import OUTCOME_TO_STAGE
 from seeds.apex.constants import (
     CAPABILITIES,
     COMPANY_PROFILE,
@@ -34,6 +36,7 @@ from seeds.apex.constants import (
     SHOWCASE_PURSUITS,
     WORKSPACE_NAME,
     WORKSPACE_SLUG,
+    capture_stage_for_pursuit,
 )
 from seeds.apex.helpers import (
     ensure_proposal_document,
@@ -127,6 +130,9 @@ async def load_apex_workspace(*, if_empty: bool = False) -> dict[str, str]:
         flagship_id: uuid.UUID | None = None
 
         for ps in SHOWCASE_PURSUITS:
+            stage = capture_stage_for_pursuit(
+                outcome=ps.outcome, active_stage=ps.capture_stage
+            )
             opp = (
                 await db.execute(
                     select(Opportunity)
@@ -146,7 +152,7 @@ async def load_apex_workspace(*, if_empty: bool = False) -> dict[str, str]:
                     due_date=datetime.now(UTC) + timedelta(days=45 if ps.outcome is None else -30),
                     posted_date=datetime.now(UTC) - timedelta(days=120),
                     estimated_value_cents=ps.value_cents,
-                    capture_stage=ps.capture_stage,
+                    capture_stage=stage,
                     incumbent=ps.incumbent,
                     notes=ps.loss_reason or ps.no_bid_reason or f"Showcase pursuit: {ps.name}",
                     created_by_user_id=admin.id,
@@ -154,6 +160,11 @@ async def load_apex_workspace(*, if_empty: bool = False) -> dict[str, str]:
                 db.add(opp)
                 await db.flush()
                 print(f"[apex] Created pursuit: {ps.name}")
+            elif opp.capture_stage not in CAPTURE_STAGES:
+                opp.capture_stage = (
+                    OUTCOME_TO_STAGE[ps.outcome] if ps.outcome else stage
+                )
+                db.add(opp)
             opportunity_map[ps.solicitation_number] = opp.id
             if ps.flagship:
                 flagship_id = opp.id
@@ -208,6 +219,7 @@ async def load_apex_workspace(*, if_empty: bool = False) -> dict[str, str]:
         # Historical pursuits for outcome intelligence depth (38 additional).
         for i, outcome in enumerate(HISTORICAL_OUTCOMES, start=1):
             sol = f"APEX-HIST-{i:04d}"
+            stage = capture_stage_for_pursuit(outcome=outcome)
             opp = (
                 await db.execute(
                     select(Opportunity)
@@ -229,12 +241,15 @@ async def load_apex_workspace(*, if_empty: bool = False) -> dict[str, str]:
                     agency=agencies[i % len(agencies)],
                     solicitation_number=sol,
                     estimated_value_cents=25_000_000_00 + i * 1_000_000_00,
-                    capture_stage=outcome if outcome != "no_bid" else "no_bid",
+                    capture_stage=stage,
                     created_by_user_id=admin.id,
                     posted_date=datetime.now(UTC) - timedelta(days=400 + i),
                 )
                 db.add(opp)
                 await db.flush()
+            elif opp.capture_stage not in CAPTURE_STAGES:
+                opp.capture_stage = OUTCOME_TO_STAGE.get(outcome, stage)
+                db.add(opp)
             await record_pursuit_outcome(
                 db,
                 opportunity=opp,

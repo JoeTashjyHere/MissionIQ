@@ -8,6 +8,8 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Any
 
+from app.models.opportunity import CAPTURE_STAGES
+
 DEMO_PASSWORD = "MissionIQ!Demo2026"
 WORKSPACE_SLUG = "apex-federal"
 WORKSPACE_NAME = "Apex Federal Solutions"
@@ -152,6 +154,25 @@ HISTORICAL_OUTCOMES: list[str] = (
 )
 
 
+def capture_stage_for_pursuit(*, outcome: str | None, active_stage: str = "capture") -> str:
+    """Return a valid opportunity.capture_stage for seeding.
+
+    Terminal won/lost/no_bid status belongs in pursuit_outcome; the opportunity
+    row starts at a non-terminal stage and is advanced by record_outcome.
+    """
+    if outcome is None:
+        if active_stage not in CAPTURE_STAGES:
+            raise ValueError(f"Invalid active capture stage: {active_stage}")
+        return active_stage
+    if outcome == "won":
+        return "submitted"
+    if outcome == "lost":
+        return "submitted"
+    if outcome == "no_bid":
+        return "qualification"
+    raise ValueError(f"Unknown outcome: {outcome}")
+
+
 @dataclass
 class PursuitSpec:
     key: str
@@ -178,7 +199,7 @@ SHOWCASE_PURSUITS: list[PursuitSpec] = [
         agency="Centers for Medicare Programs",
         sub_agency="Office of Citizen Services",
         value_cents=8_400_000_000,
-        capture_stage="won",
+        capture_stage="submitted",
         outcome="won",
         incumbent="Horizon Digital Partners",
         contract_vehicle="GSA MAS",
@@ -191,7 +212,7 @@ SHOWCASE_PURSUITS: list[PursuitSpec] = [
         agency="National Aviation Services Administration",
         sub_agency="IT Operations",
         value_cents=12_500_000_000,
-        capture_stage="lost",
+        capture_stage="submitted",
         outcome="lost",
         loss_reason="Incumbent advantage and relationship position.",
         incumbent="Vector Systems Group",
@@ -205,7 +226,7 @@ SHOWCASE_PURSUITS: list[PursuitSpec] = [
         agency="Veteran Benefits Administration",
         sub_agency="Benefits Delivery",
         value_cents=6_300_000_000,
-        capture_stage="won",
+        capture_stage="submitted",
         outcome="won",
         incumbent=None,
         contract_vehicle="CIO-SP4",
@@ -218,7 +239,7 @@ SHOWCASE_PURSUITS: list[PursuitSpec] = [
         agency="Department of Mission Security",
         sub_agency="Operations Directorate",
         value_cents=4_200_000_000,
-        capture_stage="no_bid",
+        capture_stage="qualification",
         outcome="no_bid",
         no_bid_reason="Capability gap and poor strategic alignment.",
         incumbent="Sentinel Federal Group",

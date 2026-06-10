@@ -244,7 +244,7 @@ def executive_brief(p: PursuitSpec) -> dict[str, Any]:
             "estimated_value": f"${p.value_cents / 100_000_000:.0f}M",
             "contract_vehicle": p.contract_vehicle,
             "incumbent": p.incumbent,
-            "pursuit_status": p.capture_stage,
+            "pursuit_status": p.outcome or p.capture_stage,
             "win_confidence": score,
         },
         "customer_intelligence": {
