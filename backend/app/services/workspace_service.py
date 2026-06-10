@@ -9,6 +9,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.errors import ConflictError, ForbiddenError, NotFoundError
+from app.core.rbac import require_capability
 from app.models import Capability, CompanyProfile, TeamMember, User, Workspace
 from app.schemas.workspace import (
     CapabilityCreate,
@@ -67,7 +68,7 @@ async def create_workspace(
         TeamMember(
             workspace_id=ws.id,
             user_id=user.id,
-            role="owner",
+            role="administrator",
             joined_at=datetime.now(UTC),
         )
     )
@@ -93,8 +94,7 @@ async def get_workspace_for_user(
 async def update_workspace(
     db: AsyncSession, ws: Workspace, member: TeamMember, payload: WorkspaceUpdate
 ) -> Workspace:
-    if member.role not in ("owner", "admin"):
-        raise ForbiddenError("Only owners or admins can update workspace.", code="workspace.forbidden")
+    require_capability(member.role, "workspace.manage")
     for field, value in payload.model_dump(exclude_unset=True).items():
         setattr(ws, field, value)
     return ws
@@ -117,8 +117,7 @@ async def invite_member(
     actor_membership: TeamMember,
     payload: TeamMemberInvite,
 ) -> TeamMember:
-    if actor_membership.role not in ("owner", "admin"):
-        raise ForbiddenError("Only owners or admins can invite members.", code="workspace.invite_forbidden")
+    require_capability(actor_membership.role, "member.manage")
     user = (
         await db.execute(select(User).where(User.email == payload.email))
     ).scalar_one_or_none()
@@ -143,6 +142,27 @@ async def invite_member(
         joined_at=datetime.now(UTC),
     )
     db.add(tm)
+    return tm
+
+
+async def change_member_role(
+    db: AsyncSession,
+    *,
+    ws: Workspace,
+    actor_membership: TeamMember,
+    member_id: uuid.UUID,
+    role: str,
+) -> TeamMember:
+    require_capability(actor_membership.role, "member.manage")
+    tm = await db.get(TeamMember, member_id)
+    if tm is None or tm.workspace_id != ws.id:
+        raise NotFoundError("Member not found.", code="workspace.member_not_found")
+    if tm.user_id == ws.owner_user_id and role != "administrator":
+        raise ForbiddenError(
+            "The workspace owner is always an administrator.",
+            code="workspace.owner_role_locked",
+        )
+    tm.role = role
     return tm
 
 

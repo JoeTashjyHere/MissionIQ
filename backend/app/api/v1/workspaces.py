@@ -12,6 +12,7 @@ from app.core.dependencies import CurrentUser, WorkspaceScope
 from app.schemas.workspace import (
     TeamMemberInvite,
     TeamMemberResponse,
+    TeamMemberUpdate,
     WorkspaceCreate,
     WorkspaceResponse,
     WorkspaceUpdate,
@@ -122,6 +123,44 @@ async def invite_member(
     from app.models import User
 
     u = await db.get(User, tm.user_id)
+    return TeamMemberResponse(
+        id=tm.id,
+        user_id=tm.user_id,
+        workspace_id=tm.workspace_id,
+        role=tm.role,
+        user_email=u.email if u else "",
+        user_full_name=u.full_name if u else "",
+        joined_at=tm.joined_at,
+        created_at=tm.created_at,
+    )
+
+
+@router.patch(
+    "/{workspace_id}/members/{member_id}", response_model=TeamMemberResponse
+)
+async def change_member_role(
+    member_id: Annotated[uuid.UUID, Path()],
+    payload: TeamMemberUpdate,
+    scope: WorkspaceScope,
+    user: CurrentUser,
+    db: Annotated[AsyncSession, Depends(get_db)],
+) -> TeamMemberResponse:
+    ws, actor_member = scope
+    tm = await workspace_service.change_member_role(
+        db, ws=ws, actor_membership=actor_member, member_id=member_id, role=payload.role
+    )
+    await write_audit(
+        db,
+        action="member.role_changed",
+        workspace_id=ws.id,
+        actor_user_id=user.id,
+        target_type="team_member",
+        target_id=tm.id,
+        meta={"role": tm.role},
+    )
+    from app.models import User as UserModel
+
+    u = await db.get(UserModel, tm.user_id)
     return TeamMemberResponse(
         id=tm.id,
         user_id=tm.user_id,

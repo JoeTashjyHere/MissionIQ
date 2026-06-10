@@ -18,6 +18,7 @@ import { Button } from "@/components/ds/Button";
 import { ProvenanceBadge } from "@/components/ds/ProvenanceBadge";
 import { Skeleton } from "@/components/ds/Skeleton";
 import { OutcomeCard } from "@/components/outcomes/RecordOutcome";
+import { DecisionTimeline } from "@/components/governance/DecisionTimeline";
 import { Sparkles } from "lucide-react";
 import {
   captureStageLabel,
@@ -138,6 +139,8 @@ export default function OpportunityBriefingPage({
       />
 
       <BriefingsLauncher opportunityId={opportunityId} />
+
+      <DecisionTimeline opportunityId={opportunityId} />
 
       <WinStrategySnapshotCard
         opportunityId={opportunityId}

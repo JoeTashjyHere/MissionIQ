@@ -9,6 +9,7 @@ from app.api.v1 import (
     connectors,
     documents,
     exports,
+    governance,
     health,
     market_intel,
     memory,
@@ -38,3 +39,4 @@ api_router.include_router(exports.router, tags=["exports"])
 api_router.include_router(connectors.router, tags=["connectors"])
 api_router.include_router(automation.router, tags=["automation"])
 api_router.include_router(outcomes.router, tags=["outcomes"])
+api_router.include_router(governance.router, tags=["governance"])

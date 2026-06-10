@@ -14,6 +14,14 @@ from app.models.connector import (
     ConnectorSyncJob,
 )
 from app.models.document import Document, DocumentChunk
+from app.models.governance import (
+    AssumptionValidation,
+    Comment,
+    DeliverableReview,
+    GovernanceSignal,
+    HumanOverride,
+    ReviewEvent,
+)
 from app.models.graph import GraphEdge, GraphEntity
 from app.models.intelligence import (
     AIOutput,
@@ -33,22 +41,27 @@ from app.models.workspace import TeamMember, Workspace
 
 __all__ = [
     "AIOutput",
+    "AssumptionValidation",
     "AuditLog",
     "AutomationRun",
     "Base",
     "Capability",
     "ChatMessage",
     "ChatThread",
+    "Comment",
     "ComplianceRequirement",
     "CompanyProfile",
     "Connector",
     "ConnectorCredential",
     "ConnectorSyncJob",
+    "DeliverableReview",
     "Document",
     "DocumentChunk",
     "EvaluationCriterion",
+    "GovernanceSignal",
     "GraphEdge",
     "GraphEntity",
+    "HumanOverride",
     "MarketIntelRecord",
     "MarketIntelSource",
     "Opportunity",
@@ -56,6 +69,7 @@ __all__ = [
     "PursuitOutcome",
     "RecommendationOutcome",
     "RefreshToken",
+    "ReviewEvent",
     "Risk",
     "TeamMember",
     "User",

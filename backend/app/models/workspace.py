@@ -11,7 +11,11 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.models.base import Base, TimestampMixin, UUIDPkMixin
 
-ROLES = ("owner", "admin", "member", "viewer")
+# Governance role hierarchy (see app/core/rbac.py). Each role includes
+# everything below it: viewer < contributor < reviewer < approver <
+# administrator. The workspace creator is always an administrator;
+# `workspace.owner_user_id` remains the ownership anchor.
+ROLES = ("viewer", "contributor", "reviewer", "approver", "administrator")
 
 
 class Workspace(UUIDPkMixin, TimestampMixin, Base):
@@ -56,7 +60,7 @@ class TeamMember(UUIDPkMixin, TimestampMixin, Base):
         nullable=False,
         index=True,
     )
-    role: Mapped[str] = mapped_column(String(32), nullable=False, default="member")
+    role: Mapped[str] = mapped_column(String(32), nullable=False, default="contributor")
     invited_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     joined_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 

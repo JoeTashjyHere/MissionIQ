@@ -69,7 +69,7 @@ async def seed(if_empty: bool) -> None:
                 TeamMember(
                     workspace_id=ws.id,
                     user_id=user.id,
-                    role="owner",
+                    role="administrator",
                     joined_at=datetime.now(UTC),
                 )
             )

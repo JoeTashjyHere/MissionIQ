@@ -362,6 +362,67 @@ Competitor trends (including "awards taken" per competitor), recommendation
 performance + win-confidence calibration, deterministic strategic
 observations, and the full recorded-outcome ledger.
 
+### Collaboration & Governance
+
+MissionIQ generates intelligence. **Humans make decisions.** The governance
+layer turns the platform from an individual intelligence tool into an
+organizational decision platform — teams comment, review, approve, reject,
+override, and validate, while the original AI output (and its Evidence /
+Inference / Assumption framing) is **preserved by construction**: nothing in
+the governance layer ever writes to `ai_output`. Every judgment is a new,
+append-only record beside it.
+
+**Workspace RBAC** — five roles in a strict hierarchy (`viewer <
+contributor < reviewer < approver < administrator`), stored per workspace on
+`team_member.role`. Routes never compare roles; they ask the capability layer
+(`app/core/rbac.py`) — `comment.create` needs contributor+, `review.decide` /
+`decision.override` / `assumption.validate` need approver+, team management
+needs administrator. Future RBAC expansion is a dict entry, not a refactor.
+Role changes are audited, and the Team page documents each role's powers.
+
+**Comments** (`comment`) — threaded discussion on every governed briefing
+(Customer DNA, Company DNA, Capability Match, Win Strategy, Executive Brief,
+Gate Review, Bid Decision, Outcome Intelligence): reply, resolve, reopen, and
+@mention teammates. Comment bodies are immutable; only open/resolved status
+toggles, and every action is audited.
+
+**Review workflow** (`deliverable_review` + `review_event`) — Draft → In
+Review → Approved/Rejected (→ reopen/resubmit) → Archived for the four
+decision deliverables. Every transition appends an immutable `review_event`
+(actor, notes, timestamp, and a snapshot of the deliverable's recommendation
+at decision time), so the Approval Panel renders the milestone's canonical
+record — *Generated → Submitted → Approved, by whom, with which decision* —
+straight from the ledger. Regenerating a deliverable auto-archives the stale
+review cycle: an approval can never silently refer to content that changed.
+
+**Decision ledger & human feedback** (`human_override`) — one append-only
+table backs both: categorical decision overrides (Bid → No-Bid) and score
+overrides ("MissionIQ Win Confidence 62% → Human 80%, reason: strong executive
+relationship not reflected in data"). Original and override values are stored
+side by side with a required reason; superseding an override means writing a
+new row. The pursuit hub's **Decision History timeline** reconstructs every
+major decision in order — generations, review transitions, overrides,
+assumption judgments, and the recorded outcome.
+
+**Assumption validation** (`assumption_validation`) — every statement the AI
+tagged `basis: "assumption"` is extracted from the live output (a pure JSON
+walk with stable, reorder-proof keys) and becomes validatable: Unvalidated →
+Validated/Rejected with validator, date, and notes. Judgments are append-only
+history; the original assumption always remains visible because it lives
+untouched in the AI output.
+
+**Governance signals** (`governance_signal`) — validated/rejected assumptions,
+overrides, review decisions, and resolved comments are collected as
+analyzable institutional-memory signals. Per the milestone, they are
+**collected and stored only** — recommendation logic, prompts, and Knowledge
+Graph weighting do not consume them yet (and a test asserts exactly that).
+
+**UI** — a Collaboration & Governance hub mounts automatically beneath every
+governed briefing (Comments / Review / Approvals / Assumptions / Feedback
+tabs, with role-aware actions), in the same briefing design language. Server-
+side capability checks remain authoritative; the UI only hides what a role
+cannot do.
+
 ---
 
 ## Architecture Documents
@@ -612,6 +673,13 @@ npm run dev
 ✅ **Outcome-aware memory** — historical memory items carry track records ("3W–1L · 75% historical win rate") in the Memory tab and in the compact memory context consumed by every `consumes_memory` module, so Win Strategy and the briefings became outcome-aware with zero changes to their own code
 ✅ **Capture: Outcome Intelligence** module — what the recorded track record means for THIS pursuit (relevant win/loss patterns, agency + competitor track records, strategic recommendations), with a hard never-claim-causation prompt rule and an honest empty state when no outcomes exist
 ✅ **Outcome Intelligence dashboard** (`/outcomes`) — deterministic workspace analysis: KPIs, win/loss patterns with source-pursuit chips, debrief factor frequencies, agency/capability/competitor trends (incl. awards taken), recommendation performance + calibration, strategic observations, and the recorded-outcome ledger
+✅ **Workspace RBAC** — five-role hierarchy (viewer < contributor < reviewer < approver < administrator) with a capability layer (`app/core/rbac.py`) enforced across generation, governance, and team management; audited role changes and a Team page documenting each role's powers
+✅ **Comments** — threaded, @mention-capable discussion (reply · resolve · reopen) on all eight governed briefings, with immutable bodies and full audit coverage
+✅ **Review & approval workflow** — Draft → In Review → Approved/Rejected → Archived for Win Strategy, Executive Brief, Gate Review, and Bid Decision, backed by an append-only `review_event` ledger that snapshots the recommendation at decision time; regeneration auto-archives stale cycles so approvals never refer to changed content
+✅ **Decision ledger & human feedback** — append-only `human_override` records (decision + score overrides) storing original and human values side by side with required rationale, surfaced in the per-briefing Feedback panel and the pursuit-level Decision History timeline
+✅ **Assumption validation** — every `basis: "assumption"` statement extracted from live outputs with stable keys and judged Validated/Rejected (validator · date · notes, append-only history) while the original assumption stays untouched in the AI output
+✅ **Governance signals** — human judgments collected as analyzable institutional-memory signals (`governance_signal`), explicitly not consumed by recommendation logic yet (test-enforced)
+✅ **Collaboration & Governance hub** — Comments / Review / Approvals / Assumptions / Feedback tabs mounted automatically beneath every governed briefing, with role-aware actions in the existing briefing design language
 ✅ **Intelligence Assistant** with hard grounding contract: refuses to call the LLM when no documents are indexed or retrieval returns no hits; every answer carries citations and a status pill
 ✅ SAM.gov market intelligence client + search + import + link-to-opportunity
 ✅ CSV exports (Compliance, Risks) — populated by the structured writeback path
@@ -620,7 +688,7 @@ npm run dev
 ✅ Platform shell with module-aware left nav and stubbed module groups
 ✅ Pages: Login, Signup, Dashboard, Workspaces, Opportunity list/detail, Documents, Module workbenches, Market Intelligence, Assistant
 ✅ Seed script with example opportunity + example documents
-✅ Unit tests for auth, workspace scoping, LLM router, RAG, document status state machine, Opportunity Summary contract, Customer DNA contract, the DNA-prerequisite enforcement for downstream modules, the Company DNA + Capability Match contracts, the seller-data anti-overclaim guarantee, the Win Strategy synthesis contract (basis tagging + partial-input confidence dampening + Pursuit Memory consumption), the Memory/Knowledge-Graph layer (fact extraction, entity normalization/dedup, similarity scoring, and Historical/Current/Inference basis classification), and the Executive Briefings & Gate Reviews contracts (registration/flags, decision-not-summary prompts, schema-valid stub output, Historical Evidence from memory, and partial-input confidence dampening), plus the Connectors & Automation contracts (provider registry and phase/extension-point guarantees, deterministic mock providers, real Local Repository discovery with path-escape protection, credential encryption round-trips, sync/automation state-machine and migration drift checks, and the orchestrator's retry / critical-abort / partial-failure / resume / epistemic-honesty semantics), and the Outcome Intelligence contracts (outcome vocabulary + migration drift, Laplace weighting math, alignment rules across all recommendation types and outcomes, calibration bucketing, decided-only entity records, no-causal-language assertions on patterns and observations, memory track-record propagation, and the outcome module's honest no-history behavior)
+✅ Unit tests for auth, workspace scoping, LLM router, RAG, document status state machine, Opportunity Summary contract, Customer DNA contract, the DNA-prerequisite enforcement for downstream modules, the Company DNA + Capability Match contracts, the seller-data anti-overclaim guarantee, the Win Strategy synthesis contract (basis tagging + partial-input confidence dampening + Pursuit Memory consumption), the Memory/Knowledge-Graph layer (fact extraction, entity normalization/dedup, similarity scoring, and Historical/Current/Inference basis classification), and the Executive Briefings & Gate Reviews contracts (registration/flags, decision-not-summary prompts, schema-valid stub output, Historical Evidence from memory, and partial-input confidence dampening), plus the Connectors & Automation contracts (provider registry and phase/extension-point guarantees, deterministic mock providers, real Local Repository discovery with path-escape protection, credential encryption round-trips, sync/automation state-machine and migration drift checks, and the orchestrator's retry / critical-abort / partial-failure / resume / epistemic-honesty semantics), and the Outcome Intelligence contracts (outcome vocabulary + migration drift, Laplace weighting math, alignment rules across all recommendation types and outcomes, calibration bucketing, decided-only entity records, no-causal-language assertions on patterns and observations, memory track-record propagation, and the outcome module's honest no-history behavior), and the Collaboration & Governance contracts (the five-role hierarchy and capability table, legacy-role migration mapping, every legal/illegal review transition with per-transition capabilities, append-only ledger guarantees, assumption extraction across module output shapes with stable reorder-proof keys, governance-signal emission with the not-yet-consumed guarantee, and the structural never-writes-`ai_output` invariant)
 
 📋 Remaining Capture modules (Requirement Breakdown, Win Themes, Staffing Assumptions, Proposal Outline, Market Intel Summary) — each follows the same ~80-line pattern as the modules already shipped.
 

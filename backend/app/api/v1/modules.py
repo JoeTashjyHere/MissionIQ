@@ -10,6 +10,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.db import get_db
 from app.core.dependencies import CurrentUser, OppScope
 from app.core.errors import NotFoundError
+from app.core.rbac import require_capability
 from app.intelligence.citations import build_citations
 from app.schemas.intelligence import (
     AIOutputResponse,
@@ -43,7 +44,8 @@ async def run_module(
     db: Annotated[AsyncSession, Depends(get_db)],
     payload: RunModuleRequest | None = None,
 ) -> AIOutputResponse:
-    ws, _, opportunity_id = scope
+    ws, member, opportunity_id = scope
+    require_capability(member.role, "intelligence.generate")
     payload = payload or RunModuleRequest()
     resp = await intelligence_service.run_module(
         db,

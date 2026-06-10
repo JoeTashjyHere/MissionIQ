@@ -15,6 +15,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.db import get_db
 from app.core.dependencies import OppScope, WorkspaceScope
 from app.core.errors import NotFoundError
+from app.core.rbac import require_capability
 from app.models import Opportunity, PursuitOutcome
 from app.schemas.outcome import (
     OutcomeIntelligenceReport,
@@ -45,6 +46,7 @@ async def record_outcome(
     db: Annotated[AsyncSession, Depends(get_db)],
 ) -> PursuitOutcomeResponse:
     _, member, opportunity_id = scope
+    require_capability(member.role, "outcome.record")
     opp = await db.get(Opportunity, opportunity_id)
     assert opp is not None  # OppScope already resolved it
     po = await outcome_service.record_outcome(
@@ -74,6 +76,7 @@ async def delete_outcome(
     scope: OppScope, db: Annotated[AsyncSession, Depends(get_db)]
 ) -> None:
     _, member, opportunity_id = scope
+    require_capability(member.role, "outcome.record")
     opp = await db.get(Opportunity, opportunity_id)
     assert opp is not None
     deleted = await outcome_service.delete_outcome(

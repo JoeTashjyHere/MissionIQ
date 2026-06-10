@@ -8,7 +8,10 @@ from typing import Literal
 
 from pydantic import BaseModel, EmailStr, Field, field_validator
 
+from app.core.rbac import ROLES
 from app.schemas.common import ORMModel
+
+Role = Literal[*ROLES]  # type: ignore[valid-type]
 
 
 _SLUG_RE = re.compile(r"^[a-z0-9](?:[a-z0-9-]{1,78}[a-z0-9])?$")
@@ -51,11 +54,11 @@ class WorkspaceResponse(ORMModel):
 
 class TeamMemberInvite(BaseModel):
     email: EmailStr
-    role: Literal["admin", "member", "viewer"] = "member"
+    role: Role = "contributor"
 
 
 class TeamMemberUpdate(BaseModel):
-    role: Literal["owner", "admin", "member", "viewer"]
+    role: Role
 
 
 class TeamMemberResponse(ORMModel):

@@ -13,8 +13,15 @@ export interface WorkspaceMembership {
   workspace_id: Uuid;
   workspace_name: string;
   workspace_slug: string;
-  role: "owner" | "admin" | "member" | "viewer";
+  role: WorkspaceRole;
 }
+
+export type WorkspaceRole =
+  | "viewer"
+  | "contributor"
+  | "reviewer"
+  | "approver"
+  | "administrator";
 
 export interface TokenPair {
   access_token: string;
@@ -920,4 +927,127 @@ export interface OutcomeIntelligenceOutput {
   citations: { evidence_ref?: string; claim?: string }[];
   __stub__?: boolean;
   _notice?: string;
+}
+
+// ── Collaboration & Governance ───────────────────────────────────────────────
+
+export type CommentStatus = "open" | "resolved";
+
+export interface GovernanceComment {
+  id: Uuid;
+  opportunity_id: Uuid;
+  target_module_id: string;
+  ai_output_id: Uuid | null;
+  parent_comment_id: Uuid | null;
+  body: string;
+  mentions: Uuid[];
+  status: CommentStatus;
+  author_user_id: Uuid;
+  author_name: string;
+  resolved_by_user_id: Uuid | null;
+  resolved_by_name: string | null;
+  resolved_at: string | null;
+  created_at: string;
+}
+
+export type ReviewStatus =
+  | "draft"
+  | "in_review"
+  | "approved"
+  | "rejected"
+  | "archived";
+
+export type ReviewAction = "submit" | "approve" | "reject" | "reopen" | "archive";
+
+export interface ReviewEvent {
+  id: Uuid;
+  action: "submitted" | "approved" | "rejected" | "reopened" | "archived";
+  decision_summary: string | null;
+  notes: string | null;
+  actor_user_id: Uuid | null;
+  actor_name: string | null;
+  created_at: string;
+}
+
+export interface DeliverableReview {
+  id: Uuid;
+  opportunity_id: Uuid;
+  module_id: string;
+  ai_output_id: Uuid | null;
+  status: ReviewStatus;
+  generated_at: string | null;
+  events: ReviewEvent[];
+}
+
+export type OverrideType = "decision" | "score";
+
+export interface HumanOverride {
+  id: Uuid;
+  opportunity_id: Uuid;
+  ai_output_id: Uuid | null;
+  module_id: string;
+  override_type: OverrideType;
+  field: string;
+  original_value: unknown;
+  override_value: unknown;
+  reason: string;
+  created_by_user_id: Uuid | null;
+  created_by_name: string | null;
+  created_at: string;
+}
+
+export type AssumptionStatus = "unvalidated" | "validated" | "rejected";
+
+export interface AssumptionValidationRecord {
+  id: Uuid;
+  status: "validated" | "rejected";
+  notes: string | null;
+  validator_user_id: Uuid | null;
+  validator_name: string | null;
+  created_at: string;
+}
+
+export interface AssumptionItem {
+  key: string;
+  text: string;
+  path: string;
+  status: AssumptionStatus;
+  latest: AssumptionValidationRecord | null;
+  history: AssumptionValidationRecord[];
+}
+
+export interface AssumptionPanelData {
+  module_id: string;
+  ai_output_id: Uuid | null;
+  assumptions: AssumptionItem[];
+}
+
+export type DecisionTimelineKind =
+  | "generated"
+  | "review_submitted"
+  | "review_approved"
+  | "review_rejected"
+  | "review_reopened"
+  | "review_archived"
+  | "decision_overridden"
+  | "score_overridden"
+  | "assumption_validated"
+  | "assumption_rejected"
+  | "outcome_recorded";
+
+export interface DecisionTimelineEntry {
+  kind: DecisionTimelineKind;
+  module_id: string | null;
+  label: string;
+  detail: string | null;
+  original_value: unknown;
+  adjusted_value: unknown;
+  reason: string | null;
+  actor_name: string | null;
+  occurred_at: string;
+}
+
+export interface DecisionHistory {
+  opportunity_id: Uuid;
+  entries: DecisionTimelineEntry[];
 }

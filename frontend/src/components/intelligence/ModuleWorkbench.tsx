@@ -10,6 +10,7 @@ import { EmptyState } from "@/components/ds/EmptyState";
 import { CitationsRow } from "@/components/ds/Citation";
 import { StatusPill } from "@/components/ds/StatusPill";
 import { Skeleton } from "@/components/ds/Skeleton";
+import { GovernanceHub } from "@/components/governance/GovernanceHub";
 import { formatDateTime } from "@/lib/format";
 import { AlertTriangle, FileWarning, Sparkles, Wand2 } from "lucide-react";
 
@@ -222,6 +223,13 @@ export function ModuleWorkbench({
           </div>
         </CardBody>
       </Card>
+      {latest.status === "ok" && (
+        <GovernanceHub
+          opportunityId={opportunityId}
+          moduleId={moduleId}
+          output={latest.output_json as Record<string, unknown>}
+        />
+      )}
     </div>
   );
 }
