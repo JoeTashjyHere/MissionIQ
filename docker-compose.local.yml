@@ -1,0 +1,93 @@
+name: missioniq
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Pre-built image stack — for transfer to a restricted / offline network.
+#
+# Unlike docker-compose.yml, this file does NOT build anything. It runs the
+# images that were built on an unrestricted network and loaded with:
+#     docker load -i missioniq-images.tar
+# (or pulled from a registry and re-tagged to :latest).
+#
+# Application code is still bind-mounted from this repo, so a plain `git pull`
+# updates the app without rebuilding any image. Only the Python/Node
+# dependencies (the part the corporate firewall blocks) live inside the images.
+# ─────────────────────────────────────────────────────────────────────────────
+
+services:
+  postgres:
+    image: pgvector/pgvector:pg16
+    container_name: missioniq_postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-missioniq}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-missioniq_dev_password}
+      POSTGRES_DB: ${POSTGRES_DB:-missioniq}
+    # Port intentionally NOT published, to avoid colliding with any Postgres
+    # already listening on the host (e.g. a separate 5433 instance). The backend
+    # reaches this DB over the internal compose network as `postgres:5432`.
+    # Uncomment to expose it to host-side DB tools on an alternate port:
+    # ports:
+    #   - "127.0.0.1:5434:5432"
+    volumes:
+      - missioniq_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-missioniq} -d ${POSTGRES_DB:-missioniq}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  backend:
+    image: missioniq-backend:latest
+    container_name: missioniq_backend
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      POSTGRES_HOST: postgres
+      MIQ_BLOB_LOCAL_ROOT: /app/var/blobs
+      # AWS Bedrock (optional). The default .env uses local_stub, so the app
+      # runs fine without these. To use Bedrock, set AWS_PROFILE / AWS_REGION
+      # (e.g. AWS_REGION=us-gov-west-1) and uncomment the ~/.aws mount below.
+      AWS_PROFILE: ${AWS_PROFILE:-}
+      AWS_REGION: ${AWS_REGION:-}
+    depends_on:
+      postgres:
+        condition: service_healthy
+    ports:
+      - "127.0.0.1:8000:8000"
+    volumes:
+      - ./backend:/app
+      - missioniq_blobs:/app/var/blobs
+      # Mount host AWS credentials for Bedrock. Set AWS_CONFIG_DIR if your
+      # .aws folder is not at the default location.
+      #   macOS/Linux default: ~/.aws
+      #   Windows: set AWS_CONFIG_DIR=%USERPROFILE%\.aws
+      # - ${AWS_CONFIG_DIR:-~/.aws}:/root/.aws:ro
+    command: >
+      sh -c "
+        alembic upgrade head &&
+        python -m seeds.seed --apex --if-empty &&
+        uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+      "
+
+  frontend:
+    image: missioniq-frontend:latest
+    container_name: missioniq_frontend
+    restart: unless-stopped
+    environment:
+      NEXT_PUBLIC_API_BASE_URL: http://localhost:8000/api/v1
+      NODE_ENV: development
+    depends_on:
+      - backend
+    ports:
+      - "127.0.0.1:3000:3000"
+    volumes:
+      - ./frontend:/app
+      # Keep the image's pre-installed node_modules / .next (anonymous volumes
+      # shadow the bind mount so the firewall-blocked npm install is not needed).
+      - /app/node_modules
+      - /app/.next
+    command: npm run dev
+
+volumes:
+  missioniq_pgdata:
+  missioniq_blobs:

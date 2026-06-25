@@ -38,6 +38,11 @@ backend/var/
 # Docker
 docker-compose.override.yml
 
+# Docker image archives (built for offline transfer — never commit these)
+*.tar
+*.tar.gz
+*.tgz
+
 # Build artifacts
 dist/
 build/
